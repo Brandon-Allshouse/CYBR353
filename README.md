@@ -73,7 +73,6 @@ delivery-system/
 - [ ] Create `AuthenticationController.java`:
   - Validate credentials against hashed passwords
   - Return user role AND clearance level on successful login
-  - Implement failed attempt counter (3 attempts = account lock)
   - Log all authentication attempts
 - [ ] Set up HTTP server with `/login` POST endpoint
 - [ ] Implement session management with clearance level tracking
@@ -93,7 +92,6 @@ delivery-system/
 - [ ] Verify BLP access control prevents unauthorized access
 - [ ] Test with invalid credentials and SQL injection attempts
 - [ ] Verify audit logs capture all access attempts
-- [ ] Test account lockout after 3 failed attempts
 
 ## Setup Instructions
 
