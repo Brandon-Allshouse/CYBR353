@@ -14,17 +14,26 @@
 
 ```
 delivery-system/
+├── .env.example          # Template for environment variables
+├── .env                  # Your local config (DO NOT COMMIT)
+├── .gitignore            # Includes .env
 ├── frontend/
 │   ├── login.html
 │   ├── css/
+│   │   └── styles.css
 │   └── js/
+│       └── auth.js
 ├── backend/
+│   ├── lib/
+│   │   └── mysql-connector.jar
 │   └── src/
 │       └── com/delivery/
+│           ├── Main.java
 │           ├── controllers/
 │           ├── models/
 │           ├── security/
 │           └── database/
+│               └── DatabaseConnection.java
 └── database/
     └── schema.sql
 ```
@@ -33,6 +42,8 @@ delivery-system/
 
 ### Database Setup
 - [ ] Create MySQL database `delivery_system`
+- [ ] Create `.env` file from `.env.example` with your MySQL credentials
+- [ ] Add `.env` to `.gitignore` (should already be there)
 - [ ] Create `users` table with BLP security fields:
   - `user_id`, `username`, `password_hash`, `salt`, `role`, `clearance_level`, `created_at`
   - Role options: 'customer', 'driver', 'manager', 'admin'
@@ -49,7 +60,14 @@ delivery-system/
 - [ ] Create `AuditLogger.java` - log all access attempts with timestamp, user, action, result
 
 ### Backend - Core Functionality
-- [ ] Create `DatabaseConnection.java` - establish MySQL connection via JDBC
+- [ ] Create `EnvLoader.java` - read `.env` file and load variables
+- [ ] Create `DatabaseConnection.java` - use environment variables for connection:
+  ```java
+  String url = "jdbc:mysql://" + EnvLoader.get("DB_HOST") + ":" + 
+               EnvLoader.get("DB_PORT") + "/" + EnvLoader.get("DB_NAME");
+  String user = EnvLoader.get("DB_USER");
+  String password = EnvLoader.get("DB_PASSWORD");
+  ```
 - [ ] Create `User.java` model with clearance level field
 - [ ] Create `PasswordUtil.java` - implement salt generation and SHA-256 hashing
 - [ ] Create `AuthenticationController.java`:
@@ -80,9 +98,9 @@ delivery-system/
 ## Setup Instructions
 
 ### Prerequisites
-- MySQL Server 8.0+ installed and running locally
-- Java JDK 11+ installed
-- Git installed
+- MySQL Server 8.0+ (recommend MySQL 8.4 LTS or latest)
+- Java JDK 17+ (recommend Java 21 LTS)
+- Git 2.40+
 
 ### First-Time Setup
 
@@ -92,11 +110,35 @@ delivery-system/
    cd delivery-system
    ```
 
-2. **Download MySQL Connector/J:**
-   - Download from: https://dev.mysql.com/downloads/connector/j/
+2. **Set up environment variables (IMPORTANT!):**
+   ```bash
+   # Copy the example env file
+   cp .env.example .env
+   
+   # Edit .env with your local MySQL credentials
+   # Use any text editor (notepad, nano, vim, VS Code, etc.)
+   nano .env
+   ```
+   
+   **Your `.env` file should look like this:**
+   ```
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_NAME=delivery_system
+   DB_USER=root
+   DB_PASSWORD=your_mysql_password_here
+   SERVER_PORT=8080
+   ```
+   
+   **⚠️ CRITICAL: Never commit your .env file to Git!**
+   - The `.gitignore` file already blocks it
+   - Each team member uses their own local `.env` with their own MySQL password
+
+3. **Download MySQL Connector/J:**
+   - Download latest version (8.4+) from: https://dev.mysql.com/downloads/connector/j/
    - Place `mysql-connector-java-x.x.xx.jar` in the `backend/lib/` folder
 
-3. **Setup Database:**
+4. **Setup Database:**
    ```bash
    # Login to MySQL
    mysql -u root -p
@@ -111,10 +153,6 @@ delivery-system/
    # Exit MySQL
    exit;
    ```
-
-4. **Configure Database Credentials:**
-   - Edit `backend/src/com/delivery/database/DatabaseConnection.java`
-   - Update your MySQL username/password (lines 10-12)
 
 5. **Compile and Run Backend:**
    ```bash
@@ -223,13 +261,15 @@ git branch -d feature/login-page
 - `docs/description` - for documentation updates
 
 **Rules:**
-- ❌ DON'T: `git push origin main` unless you're 100% sure
-- ❌ DON'T: Push code that doesn't compile
-- ❌ DON'T: Push code you haven't tested
-- ✅ DO: Create a branch for each task
-- ✅ DO: Test locally before pushing
-- ✅ DO: Write clear commit messages
-- ✅ DO: Pull from main frequently to stay updated
+- DON'T: `git push origin main` unless you're 100% sure
+- DON'T: Push code that doesn't compile
+- DON'T: Push code you haven't tested
+- DON'T: Ever commit your `.env` file (it has your passwords!)
+- DO: Create a branch for each task
+- DO: Test locally before pushing
+- DO: Write clear commit messages
+- DO: Pull from main frequently to stay updated
+- DO: Keep `.env` in `.gitignore`
 
 ### Troubleshooting
 
@@ -268,9 +308,25 @@ mysql -u root -p -e "SELECT 1;"
 
 ## Localhost Development Notes
 
-- Backend runs on `http://localhost:8080`
+- Backend runs on `http://localhost:8080` (or port specified in `.env`)
 - Frontend can be opened directly in browser (uses `file://` protocol)
 - No CORS issues since everything is local
 - MySQL runs on default `localhost:3306`
 - No HTTPS needed for localhost testing
 - Session management uses in-memory storage (resets on server restart)
+
+## Environment Variables (.env)
+
+**What is a .env file?**
+A `.env` file stores sensitive configuration (like database passwords) that should NOT be committed to Git. Each team member has their own `.env` file with their own local credentials.
+
+**Files you'll have:**
+- `.env.example` - Template showing what variables are needed (COMMIT THIS)
+- `.env` - Your actual credentials (NEVER COMMIT THIS)
+- `.gitignore` - Contains `.env` to prevent accidental commits
+
+**How to use:**
+1. Copy `.env.example` to `.env`
+2. Fill in your own MySQL password in `.env`
+3. Code reads from `.env` using `EnvLoader.java`
+4. Never push `.env` to GitHub
