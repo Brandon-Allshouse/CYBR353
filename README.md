@@ -25,7 +25,7 @@ delivery-system/
 │       └── auth.js
 ├── backend/
 │   ├── lib/
-│   │   └── mysql-connector.jar
+│   │   └── mysql-connector-j-8.4.0.jar
 │   └── src/
 │       └── com/delivery/
 │           ├── Main.java
@@ -98,118 +98,224 @@ delivery-system/
 ## Setup Instructions
 
 ### Prerequisites
-- MySQL Server 8.0+ (recommend MySQL 8.4 LTS or latest)
-- Java JDK 17+ (recommend Java 21 LTS)
-- Git 2.40+
+
+**Java Development Kit (JDK):**
+- **Windows:**
+  1. Download Java 21 LTS from: https://adoptium.net/
+  2. Run installer, select "Add to PATH"
+  3. Verify: Open CMD and run `java -version`
+  
+- **Ubuntu/Debian:**
+  ```bash
+  sudo apt update
+  sudo apt install openjdk-21-jdk
+  java -version
+  ```
+
+**MySQL Server:**
+- **Windows:**
+  1. Download MySQL Installer from: https://dev.mysql.com/downloads/installer/
+  2. Choose "Developer Default" setup
+  3. Set root password during installation (remember this!)
+  4. MySQL runs as Windows service automatically
+  
+- **Ubuntu/Debian:**
+  ```bash
+  sudo apt update
+  sudo apt install mysql-server
+  sudo systemctl start mysql
+  sudo mysql_secure_installation
+  # Set root password when prompted
+  ```
+
+**Git:**
+- **Windows:**
+  1. Download from: https://git-scm.com/download/win
+  2. Run installer with default options
+  3. Use Git Bash or Command Prompt
+  
+- **Ubuntu/Debian:**
+  ```bash
+  sudo apt install git
+  git --version
+  ```
 
 ### First-Time Setup
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd delivery-system
-   ```
+**1. Clone the repository:**
+```bash
+# Both Windows and Linux
+git clone <repository-url>
+cd delivery-system
+```
 
-2. **Set up environment variables (IMPORTANT!):**
-   ```bash
-   # Copy the example env file
-   cp .env.example .env
-   
-   # Edit .env with your local MySQL credentials
-   # Use any text editor (notepad, nano, vim, VS Code, etc.)
-   nano .env
-   ```
-   
-   **Your `.env` file should look like this:**
-   ```
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_NAME=delivery_system
-   DB_USER=root
-   DB_PASSWORD=your_mysql_password_here
-   SERVER_PORT=8080
-   ```
-   
-   **⚠️ CRITICAL: Never commit your .env file to Git!**
-   - The `.gitignore` file already blocks it
-   - Each team member uses their own local `.env` with their own MySQL password
+**2. Download MySQL Connector/J JAR file:**
 
-3. **Download MySQL Connector/J:**
-   - Download latest version (8.4+) from: https://dev.mysql.com/downloads/connector/j/
-   - Place `mysql-connector-java-x.x.xx.jar` in the `backend/lib/` folder
+This is the JDBC driver that lets Java talk to MySQL.
 
-4. **Setup Database:**
-   ```bash
-   # Login to MySQL
-   mysql -u root -p
-   
-   # Create database and tables
-   source database/schema.sql
-   
-   # Verify tables were created
-   USE delivery_system;
-   SHOW TABLES;
-   
-   # Exit MySQL
-   exit;
-   ```
+**Option A: Direct Download (Recommended)**
+1. Go to: https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.4.0/
+2. Download: `mysql-connector-j-8.4.0.jar`
+3. Create `backend/lib/` folder if it doesn't exist
+4. Place the JAR file in `backend/lib/`
 
-5. **Compile and Run Backend:**
-   ```bash
-   # Navigate to backend source
-   cd backend/src
-   
-   # Compile all Java files (Windows)
-   javac -cp ".;../lib/mysql-connector.jar" com/delivery/**/*.java
-   
-   # Compile all Java files (Mac/Linux)
-   javac -cp ".:../lib/mysql-connector.jar" com/delivery/**/*.java
-   
-   # Run the server (Windows)
-   java -cp ".;../lib/mysql-connector.jar" com.delivery.Main
-   
-   # Run the server (Mac/Linux)
-   java -cp ".:../lib/mysql-connector.jar" com.delivery.Main
-   ```
-   Server should start on `http://localhost:8080`
+**Option B: From MySQL Website**
+1. Go to: https://dev.mysql.com/downloads/connector/j/
+2. Select "Platform Independent" 
+3. Download ZIP/TAR archive
+4. Extract and find `mysql-connector-j-8.4.0.jar` inside
+5. Copy to `backend/lib/`
 
-6. **Open Frontend:**
-   - Simply open `frontend/login.html` in your browser
-   - Or right-click the file and "Open with Chrome/Firefox"
+**IMPORTANT:** If you installed via `.deb` on Ubuntu, the connector is system-wide but you still need the JAR file in your project for development. Copy it from:
+```bash
+# Find where it's installed
+dpkg -L mysql-connector-j | grep jar
 
-### Helpful Commands for Development
+# Copy to your project
+cp /usr/share/java/mysql-connector-j-8.4.0.jar backend/lib/
+```
+
+**3. Set up environment variables:**
 
 ```bash
-# Check if MySQL is running
-# Windows:
-net start | find "MySQL"
+# Copy the example file
+cp .env.example .env
 
-# Mac:
-brew services list | grep mysql
+# Edit with your preferred editor
+# Windows: notepad .env
+# Linux: nano .env
+```
 
-# Linux:
-systemctl status mysql
+**Your `.env` file should contain:**
+```
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=delivery_system
+DB_USER=root
+DB_PASSWORD=your_actual_mysql_password
+SERVER_PORT=8080
+```
 
-# Check if Java is installed
+**CRITICAL: Never commit your .env file to Git!**
+
+**4. Setup Database:**
+
+**Windows (Command Prompt or PowerShell):**
+```cmd
+mysql -u root -p
+```
+
+**Ubuntu/Linux:**
+```bash
+sudo mysql -u root -p
+```
+
+**Then in MySQL prompt (both OS):**
+```sql
+source database/schema.sql;
+-- OR if source doesn't work:
+-- Copy/paste the contents of schema.sql
+
+-- Verify
+USE delivery_system;
+SHOW TABLES;
+exit;
+```
+
+**5. Compile and Run Backend:**
+
+**Windows (Command Prompt):**
+```cmd
+cd backend\src
+javac -cp ".;..\lib\mysql-connector-j-8.4.0.jar" com\delivery\**\*.java
+java -cp ".;..\lib\mysql-connector-j-8.4.0.jar" com.delivery.Main
+```
+
+**Ubuntu/Linux (Terminal):**
+```bash
+cd backend/src
+javac -cp ".:../lib/mysql-connector-j-8.4.0.jar" com/delivery/**/*.java
+java -cp ".:../lib/mysql-connector-j-8.4.0.jar" com.delivery.Main
+```
+
+You should see: `Server started on http://localhost:8080`
+
+**6. Open Frontend:**
+- Navigate to `frontend/login.html`
+- Right-click and select "Open with" your browser (Chrome, Firefox, etc.)
+- Or drag the file into your browser window
+
+### Helpful Development Commands
+
+**Check if MySQL is running:**
+
+**Windows:**
+```cmd
+sc query MySQL80
+```
+
+**Ubuntu/Linux:**
+```bash
+sudo systemctl status mysql
+```
+
+**Start/Stop MySQL:**
+
+**Windows:**
+```cmd
+net start MySQL80
+net stop MySQL80
+```
+
+**Ubuntu/Linux:**
+```bash
+sudo systemctl start mysql
+sudo systemctl stop mysql
+sudo systemctl restart mysql
+```
+
+**Check if Java is installed:**
+```bash
+# Both Windows and Linux
 java -version
 javac -version
+```
 
-# Check if port 8080 is in use
-# Windows:
+**Check if port 8080 is in use:**
+
+**Windows:**
+```cmd
 netstat -ano | findstr :8080
+```
 
-# Mac/Linux:
-lsof -i :8080
+**Ubuntu/Linux:**
+```bash
+sudo lsof -i :8080
+```
 
-# Kill process on port 8080 if needed
-# Windows: (use PID from netstat command)
+**Kill process on port 8080:**
+
+**Windows:**
+```cmd
+# Get PID from netstat command above, then:
 taskkill /PID <PID> /F
+```
 
-# Mac/Linux:
-kill -9 $(lsof -ti:8080)
+**Ubuntu/Linux:**
+```bash
+sudo kill -9 $(sudo lsof -ti:8080)
+```
 
-# Quick restart backend (from project root)
-cd backend/src && javac -cp ".:../lib/mysql-connector.jar" com/delivery/**/*.java && java -cp ".:../lib/mysql-connector.jar" com.delivery.Main
+**Quick backend restart:**
+
+**Windows:**
+```cmd
+cd backend\src && javac -cp ".;..\lib\mysql-connector-j-8.4.0.jar" com\delivery\**\*.java && java -cp ".;..\lib\mysql-connector-j-8.4.0.jar" com.delivery.Main
+```
+
+**Ubuntu/Linux:**
+```bash
+cd backend/src && javac -cp ".:../lib/mysql-connector-j-8.4.0.jar" com/delivery/**/*.java && java -cp ".:../lib/mysql-connector-j-8.4.0.jar" com.delivery.Main
 ```
 
 ### Git Workflow
@@ -274,22 +380,51 @@ git branch -d feature/login-page
 ### Troubleshooting
 
 **MySQL Connection Failed:**
-```bash
-# Verify MySQL is running and credentials are correct
-mysql -u root -p -e "SELECT 1;"
+
+**Windows:**
+```cmd
+# Check if MySQL service is running
+sc query MySQL80
+
+# Try connecting manually
+mysql -u root -p
 ```
 
+**Ubuntu/Linux:**
+```bash
+# Check MySQL status
+sudo systemctl status mysql
+
+# Try connecting
+mysql -u root -p
+
+# Check if MySQL is listening on port 3306
+sudo netstat -tlnp | grep 3306
+```
+
+**Java ClassNotFoundException for MySQL Driver:**
+- Verify `mysql-connector-j-8.4.0.jar` exists in `backend/lib/`
+- Check your classpath in compile/run commands
+- Make sure you're using semicolon (`;`) on Windows and colon (`:`) on Linux in classpath
+
 **Port 8080 Already in Use:**
-- Kill the process using commands above, or
-- Change port in `Main.java` and `auth.js`
+- Use kill commands above to stop the process
+- Or change `SERVER_PORT` in `.env` to a different port (like 8081)
 
-**ClassNotFoundException for MySQL Driver:**
-- Verify `mysql-connector.jar` is in `backend/lib/`
-- Check classpath in compile/run commands
+**"javac not found" or "java not found":**
+- Java is not installed or not in PATH
+- Windows: Reinstall Java and check "Add to PATH"
+- Linux: Run `sudo apt install openjdk-21-jdk`
 
-**CORS Errors:**
-- Open HTML file directly in browser (not through file explorer preview)
-- Or use Live Server extension in VS Code
+**MySQL Access Denied:**
+- Check username/password in `.env` file
+- Try connecting manually: `mysql -u root -p`
+- You may need to create a new MySQL user or reset root password
+
+**Frontend can't connect to backend:**
+- Make sure backend is running (check terminal for "Server started" message)
+- Check that `auth.js` is pointing to correct URL: `http://localhost:8080/login`
+- Open browser console (F12) to see any errors
 
 ## Test Credentials (by Clearance Level)
 
@@ -297,14 +432,6 @@ mysql -u root -p -e "SELECT 1;"
 - **Confidential Driver:** `driver1` / `driver123` (Clearance: 1)
 - **Secret Manager:** `manager1` / `mgr123` (Clearance: 2)
 - **Top Secret Admin:** `admin` / `admin123` (Clearance: 3)
-
-## BLP Security Implementation Notes
-
-- All users assigned clearance level (0-3) upon account creation
-- Read access: Users can only read data at or below their clearance level
-- Write access: Users can only write to data at or above their clearance level
-- All access attempts logged to `audit_log` table
-- Failed BLP checks return "Access Denied" with reason logged
 
 ## Localhost Development Notes
 
@@ -330,3 +457,11 @@ A `.env` file stores sensitive configuration (like database passwords) that shou
 2. Fill in your own MySQL password in `.env`
 3. Code reads from `.env` using `EnvLoader.java`
 4. Never push `.env` to GitHub
+
+## BLP Security Implementation Notes
+
+- All users assigned clearance level (0-3) upon account creation
+- Read access: Users can only read data at or below their clearance level
+- Write access: Users can only write to data at or above their clearance level
+- All access attempts logged to `audit_log` table
+- Failed BLP checks return "Access Denied" with reason logged
