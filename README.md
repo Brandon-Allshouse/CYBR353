@@ -194,6 +194,9 @@ DB_NAME=delivery_system
 DB_USER=root
 DB_PASSWORD=your_actual_mysql_password
 SERVER_PORT=8080
+SESSION_TIMEOUT=30
+AUDIT_LOGGING_ENABLED=true
+LOG_FILE_PATH=logs/audit.log
 ```
 
 **CRITICAL: Never commit your .env file to Git!**
@@ -441,6 +444,7 @@ sudo netstat -tlnp | grep 3306
 - MySQL runs on default `localhost:3306`
 - No HTTPS needed for localhost testing
 - Session management uses in-memory storage (resets on server restart)
+- Sessions automatically expire after 30 minutes of inactivity (configurable via SESSION_TIMEOUT in `.env`)
 
 ## Environment Variables (.env)
 
