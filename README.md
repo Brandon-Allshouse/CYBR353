@@ -69,13 +69,13 @@ delivery-system/
   String password = EnvLoader.get("DB_PASSWORD");
   ```
 - [x] Create `User.java` model with clearance level field
-- [ ] Create `PasswordUtil.java` - implement salt generation and SHA-256 hashing
+- [x] Create `PasswordUtil.java` - implement salt generation and SHA-256 hashing
 - [ ] Create `AuthenticationController.java`:
   - Validate credentials against hashed passwords
   - Return user role AND clearance level on successful login
   - Log all authentication attempts
 - [ ] Set up HTTP server with `/login` POST endpoint
-- [ ] Implement session management with clearance level tracking
+- [x] Implement session management with clearance level tracking
 
 ### Frontend Development
 - [ ] Create `login.html` with username/password form and error display
