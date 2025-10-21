@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - System Access</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="center"><h1>Optimized Delivery System</h1></div>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>Login</h1>
+            <p>Please login to your account</p>
+        </div>
+
+        <div id="errorDisplay" class="error-message"></div>
+
+        <form id="loginForm" novalidate>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Enter your username"
+                    required
+                    autocomplete="username"
+                >
+                <div class="field-error" id="usernameError"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Enter your password"
+                    required
+                    autocomplete="current-password"
+                >
+                <div class="field-error" id="passwordError"></div>
+            </div>
+
+            <button type="submit" class="btn-login" id="loginBtn">
+                <span class="btn-text">Login</span>
+                <div class="spinner"></div>
+            </button>
+        </form>
+
+        <div class="forgot-password">
+            <a href="#">Forgot your password?</a>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>
