@@ -41,16 +41,16 @@ delivery-system/
 ## Milestone 1 Checklist: Login with BLP Security
 
 ### Database Setup
-- [ ] Create MySQL database `delivery_system`
-- [ ] Create `.env` file from `.env.example` with your MySQL credentials
-- [ ] Add `.env` to `.gitignore` (should already be there)
-- [ ] Create `users` table with BLP security fields:
+- [x] Create MySQL database `delivery_system`
+- [x] Create `.env` file from `.env.example` with your MySQL credentials
+- [x] Add `.env` to `.gitignore` (should already be there)
+- [x] Create `users` table with BLP security fields:
   - `user_id`, `username`, `password_hash`, `salt`, `role`, `clearance_level`, `created_at`
   - Role options: 'customer', 'driver', 'manager', 'admin'
   - Clearance levels: 0 (Unclassified), 1 (Confidential), 2 (Secret), 3 (Top Secret)
-- [ ] Insert test users with different clearance levels
-- [ ] Create `security_labels` table for BLP object classification
-- [ ] Create `audit_log` table for tracking access attempts
+- [x] Insert test users with different clearance levels
+- [x] Create `security_labels` table for BLP object classification
+- [x] Create `audit_log` table for tracking access attempts
 
 ### Backend - Security Layer
 - [x] Create `SecurityLevel.java` enum (UNCLASSIFIED, CONFIDENTIAL, SECRET, TOP_SECRET)
