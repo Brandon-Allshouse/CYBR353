@@ -1,6 +1,7 @@
 package com.delivery.security;
 
 import com.delivery.database.DatabaseConnection;
+import com.delivery.util.Result;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,11 +9,21 @@ import java.sql.SQLException;
 
 public class AuditLogger {
 
-    // Logs to audit_log table. Pass null for userId/ipAddress if not available.
-    public static synchronized void log(Long userId, String username, String action, String result, String ipAddress, String details) {
+    // Inserts audit record into audit_log table. Pass null for userId/ipAddress if unavailable.
+    public static synchronized Result<Void, String> log(Long userId, String username, String action,
+                                                         String result, String ipAddress, String details) {
+        if (username == null || action == null || result == null) {
+            return Result.err("Username, action, and result are required");
+        }
+
         String sql = "INSERT INTO audit_log (user_id, username, action, result, ip_address, details) VALUES (?, ?, ?, ?, ?, ?)";
 
-        try (Connection conn = DatabaseConnection.getConnection();
+        Result<Connection, String> connResult = DatabaseConnection.getConnection();
+        if (connResult.isErr()) {
+            return Result.err("Database connection failed: " + connResult.unwrapErr());
+        }
+
+        try (Connection conn = connResult.unwrap();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             if (userId != null) {
@@ -28,14 +39,15 @@ public class AuditLogger {
             stmt.setString(6, details);
 
             stmt.executeUpdate();
+            return Result.ok(null);
 
         } catch (SQLException e) {
-            throw new RuntimeException("Audit log insert failed", e);
+            return Result.err("Audit log insert failed: " + e.getMessage());
         }
     }
 
-    // Simplified version when only username is available
-    public static void log(String username, String action, String result, String details) {
-        log(null, username, action, result, null, details);
+    // Convenience method when only basic info is available
+    public static Result<Void, String> log(String username, String action, String result, String details) {
+        return log(null, username, action, result, null, details);
     }
 }
