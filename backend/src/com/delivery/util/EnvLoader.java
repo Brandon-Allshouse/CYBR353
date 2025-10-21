@@ -8,7 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class EnvLoader {
-    private static final Map<String,String> env = new HashMap<>();
+    private static final Map<String, String> env = new HashMap<>();
+    private static String loadError = null;
 
     static {
         loadDotEnv();
@@ -16,7 +17,11 @@ public class EnvLoader {
 
     private static void loadDotEnv() {
         File f = new File(".env");
-        if (!f.exists()) return; // silently continue; fallback to system env
+        if (!f.exists()) {
+            loadError = ".env file not found";
+            return;
+        }
+
         try (BufferedReader br = new BufferedReader(new FileReader(f))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -32,13 +37,21 @@ public class EnvLoader {
                 env.put(key, val);
             }
         } catch (IOException e) {
-            System.err.println("Failed to load .env: " + e.getMessage());
+            loadError = "Failed to load .env: " + e.getMessage();
         }
     }
 
-    public static String get(String key) {
+    // Returns environment variable from .env or system env, or error if not found
+    public static Result<String, String> get(String key) {
         String v = env.get(key);
-        if (v != null) return v;
-        return System.getenv(key);
+        if (v != null) return Result.ok(v);
+
+        v = System.getenv(key);
+        if (v != null) return Result.ok(v);
+
+        if (loadError != null) {
+            return Result.err("Environment variable '" + key + "' not found (" + loadError + ")");
+        }
+        return Result.err("Environment variable '" + key + "' not found");
     }
 }

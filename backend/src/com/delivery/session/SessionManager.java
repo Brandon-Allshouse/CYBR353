@@ -1,6 +1,7 @@
 package com.delivery.session;
 
 import com.delivery.security.SecurityLevel;
+import com.delivery.util.Result;
 
 import java.time.Instant;
 import java.util.Map;
@@ -13,8 +14,7 @@ public class SessionManager {
 
     static {
         String t = System.getenv("SESSION_TIMEOUT_SECONDS");
-        if (t == null) t = "3600";
-        timeoutSeconds = Long.parseLong(t);
+        timeoutSeconds = (t != null) ? Long.parseLong(t) : 3600;
     }
 
     public static class Session {
@@ -31,6 +31,7 @@ public class SessionManager {
         }
     }
 
+    // Creates new session and returns token
     public static String createSession(String username, String role, SecurityLevel clearance) {
         String token = UUID.randomUUID().toString();
         Instant expiry = Instant.now().plusSeconds(timeoutSeconds);
@@ -38,17 +39,24 @@ public class SessionManager {
         return token;
     }
 
-    public static Session getSession(String token) {
-        if (token == null) return null;
+    // Retrieves session by token, extending expiry if valid
+    public static Result<Session, String> getSession(String token) {
+        if (token == null || token.isEmpty()) {
+            return Result.err("Token is required");
+        }
+
         Session s = sessions.get(token);
-        if (s == null) return null;
+        if (s == null) {
+            return Result.err("Session not found");
+        }
+
         if (Instant.now().isAfter(s.expiry)) {
             sessions.remove(token);
-            return null;
+            return Result.err("Session expired");
         }
-        // extend session
+
         s.expiry = Instant.now().plusSeconds(timeoutSeconds);
-        return s;
+        return Result.ok(s);
     }
 
     public static void invalidate(String token) {

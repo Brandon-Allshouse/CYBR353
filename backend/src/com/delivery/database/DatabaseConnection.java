@@ -1,6 +1,7 @@
 package com.delivery.database;
 
 import com.delivery.util.EnvLoader;
+import com.delivery.util.Result;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -9,20 +10,36 @@ import java.sql.SQLException;
 public class DatabaseConnection {
     private static Connection conn = null;
 
-    public static Connection getConnection() throws SQLException {
-        if (conn != null && !conn.isClosed()) return conn;
-        String host = EnvLoader.get("DB_HOST");
-        String port = EnvLoader.get("DB_PORT");
-        String name = EnvLoader.get("DB_NAME");
-        String user = EnvLoader.get("DB_USER");
-        String password = EnvLoader.get("DB_PASSWORD");
-
-        String url = "jdbc:mysql://" + host + ":" + port + "/" + name + "?serverTimezone=UTC&useSSL=false";
+    // Returns database connection or error message
+    public static Result<Connection, String> getConnection() {
         try {
-            conn = DriverManager.getConnection(url, user, password);
-            return conn;
+            if (conn != null && !conn.isClosed()) {
+                return Result.ok(conn);
+            }
         } catch (SQLException e) {
-            throw e;
+            // Existing connection is bad, create new one
+        }
+
+        Result<String, String> hostResult = EnvLoader.get("DB_HOST");
+        Result<String, String> portResult = EnvLoader.get("DB_PORT");
+        Result<String, String> nameResult = EnvLoader.get("DB_NAME");
+        Result<String, String> userResult = EnvLoader.get("DB_USER");
+        Result<String, String> passwordResult = EnvLoader.get("DB_PASSWORD");
+
+        if (hostResult.isErr()) return Result.err("DB_HOST not configured");
+        if (portResult.isErr()) return Result.err("DB_PORT not configured");
+        if (nameResult.isErr()) return Result.err("DB_NAME not configured");
+        if (userResult.isErr()) return Result.err("DB_USER not configured");
+        if (passwordResult.isErr()) return Result.err("DB_PASSWORD not configured");
+
+        String url = "jdbc:mysql://" + hostResult.unwrap() + ":" + portResult.unwrap() + "/" +
+                     nameResult.unwrap() + "?serverTimezone=UTC&useSSL=false";
+
+        try {
+            conn = DriverManager.getConnection(url, userResult.unwrap(), passwordResult.unwrap());
+            return Result.ok(conn);
+        } catch (SQLException e) {
+            return Result.err("Database connection failed: " + e.getMessage());
         }
     }
 }

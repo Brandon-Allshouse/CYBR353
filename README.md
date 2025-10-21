@@ -10,6 +10,67 @@
 - **Database:** MySQL (with BLP security model)
 - **Deployment:** Localhost only
 
+## Error Handling: Result<T, E> Pattern
+
+This project uses **Result<T, E>** for type-safe error handling instead of exceptions. This approach provides:
+- **Security:** Forces explicit error handling, eliminates silent failures
+- **Standardization:** Consistent error handling across all backend code
+- **Performance:** No exception stack trace overhead
+
+### Using Result<T, E>
+
+All backend methods that can fail return `Result<T, E>` where:
+- `T` is the success type
+- `E` is the error type (usually String)
+
+**Example - Checking results:**
+```java
+Result<Connection, String> result = DatabaseConnection.getConnection();
+
+if (result.isOk()) {
+    Connection conn = result.unwrap();
+    // Use connection
+} else {
+    String error = result.unwrapErr();
+    // Handle error
+}
+```
+
+**Example - Chaining operations:**
+```java
+Result<String, String> hashResult = PasswordUtil.hashPassword(password, salt);
+if (hashResult.isErr()) {
+    return Result.err("Password hashing failed: " + hashResult.unwrapErr());
+}
+String hash = hashResult.unwrap();
+```
+
+**Example - Transforming results:**
+```java
+Result<SecurityLevel, String> levelResult = SecurityLevel.fromInt(clearanceLevel);
+return levelResult.map(level -> new User(id, username, role, level));
+```
+
+### Methods That Use Result
+
+- `EnvLoader.get(String key)` → `Result<String, String>`
+- `DatabaseConnection.getConnection()` → `Result<Connection, String>`
+- `PasswordUtil.hashPassword(String, String)` → `Result<String, String>`
+- `AuditLogger.log(...)` → `Result<Void, String>`
+- `SessionManager.getSession(String token)` → `Result<Session, String>`
+- `SecurityLevel.fromString(String)` → `Result<SecurityLevel, String>`
+- `SecurityLevel.fromInt(int)` → `Result<SecurityLevel, String>`
+
+### Why Not Exceptions?
+
+Exceptions in Java have security and reliability issues:
+- Can be silently swallowed with empty catch blocks
+- Don't appear in method signatures (unchecked exceptions)
+- Performance overhead from stack trace generation
+- Easy to forget to handle error cases
+
+Result forces you to handle errors explicitly at compile time.
+
 ## Project Structure
 
 ```

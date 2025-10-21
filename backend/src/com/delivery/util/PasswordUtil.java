@@ -14,20 +14,24 @@ public class PasswordUtil {
         return Base64.getEncoder().encodeToString(s);
     }
 
-    // Computes SHA-256(password + salt)
-    public static String hashPassword(String password, String salt) {
+    // Returns SHA-256(password + salt) hash or error message
+    public static Result<String, String> hashPassword(String password, String salt) {
+        if (password == null || salt == null) {
+            return Result.err("Password and salt cannot be null");
+        }
+
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             md.update(password.getBytes());
             byte[] hashed = md.digest(salt.getBytes());
-            return bytesToHex(hashed);
+            return Result.ok(bytesToHex(hashed));
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
+            return Result.err("SHA-256 algorithm not available");
         }
     }
 
     private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) {
             sb.append(String.format("%02x", b));
         }
