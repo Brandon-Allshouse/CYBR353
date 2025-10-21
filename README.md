@@ -139,9 +139,9 @@ delivery-system/
 - [x] Implement session management with clearance level tracking
 
 ### Frontend Development
-- [ ] Create `login.html` with username/password form and error display
-- [ ] Style with `styles.css` (centered form, professional design)
-- [ ] Create `auth.js`:
+- [x] Create `login.html` with username/password form and error display
+- [x] Style with `styles.css` (centered form, professional design)
+- [x] Create `auth.js`:
   - Handle form submission and client-side validation
   - Send POST request to `/login` endpoint
   - Store user clearance level in session on success
