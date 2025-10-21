@@ -1,4 +1,3 @@
-
 package com.delivery.security;
 
 public enum SecurityLevel {
