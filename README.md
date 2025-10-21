@@ -53,22 +53,22 @@ delivery-system/
 - [ ] Create `audit_log` table for tracking access attempts
 
 ### Backend - Security Layer
-- [ ] Create `SecurityLevel.java` enum (UNCLASSIFIED, CONFIDENTIAL, SECRET, TOP_SECRET)
-- [ ] Create `BLPAccessControl.java` class:
+- [x] Create `SecurityLevel.java` enum (UNCLASSIFIED, CONFIDENTIAL, SECRET, TOP_SECRET)
+- [x] Create `BLPAccessControl.java` class:
   - Implement `checkReadAccess()` - enforce "no read up" (user clearance >= object classification)
   - Implement `checkWriteAccess()` - enforce "no write down" (user clearance <= object classification)
-- [ ] Create `AuditLogger.java` - log all access attempts with timestamp, user, action, result
+- [x] Create `AuditLogger.java` - log all access attempts with timestamp, user, action, result
 
 ### Backend - Core Functionality
-- [ ] Create `EnvLoader.java` - read `.env` file and load variables
-- [ ] Create `DatabaseConnection.java` - use environment variables for connection:
+- [x] Create `EnvLoader.java` - read `.env` file and load variables
+- [x] Create `DatabaseConnection.java` - use environment variables for connection:
   ```java
   String url = "jdbc:mysql://" + EnvLoader.get("DB_HOST") + ":" + 
                EnvLoader.get("DB_PORT") + "/" + EnvLoader.get("DB_NAME");
   String user = EnvLoader.get("DB_USER");
   String password = EnvLoader.get("DB_PASSWORD");
   ```
-- [ ] Create `User.java` model with clearance level field
+- [x] Create `User.java` model with clearance level field
 - [ ] Create `PasswordUtil.java` - implement salt generation and SHA-256 hashing
 - [ ] Create `AuthenticationController.java`:
   - Validate credentials against hashed passwords
