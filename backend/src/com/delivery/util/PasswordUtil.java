@@ -14,11 +14,12 @@ public class PasswordUtil {
         return Base64.getEncoder().encodeToString(s);
     }
 
+    // Computes SHA-256(password + salt)
     public static String hashPassword(String password, String salt) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            md.update(salt.getBytes());
-            byte[] hashed = md.digest(password.getBytes());
+            md.update(password.getBytes());
+            byte[] hashed = md.digest(salt.getBytes());
             return bytesToHex(hashed);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not available", e);

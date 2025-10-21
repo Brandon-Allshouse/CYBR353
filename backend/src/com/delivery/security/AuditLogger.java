@@ -1,25 +1,41 @@
 package com.delivery.security;
 
-import com.delivery.util.EnvLoader;
+import com.delivery.database.DatabaseConnection;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 public class AuditLogger {
-    private static final String path = EnvLoader.get("AUDIT_LOG_PATH") != null ? EnvLoader.get("AUDIT_LOG_PATH") : "./backend/audit.log";
-    private static final DateTimeFormatter fmt = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault());
 
-    public static synchronized void log(String user, String action, String resource, String result) {
-        String ts = fmt.format(Instant.now());
-        String entry = String.format("%s | user=%s | action=%s | resource=%s | result=%s", ts, user, action, resource, result);
-        try (PrintWriter out = new PrintWriter(new FileWriter(path, true))) {
-            out.println(entry);
-        } catch (IOException e) {
-            System.err.println("Audit log failed: " + e.getMessage());
+    // Logs to audit_log table. Pass null for userId/ipAddress if not available.
+    public static synchronized void log(Long userId, String username, String action, String result, String ipAddress, String details) {
+        String sql = "INSERT INTO audit_log (user_id, username, action, result, ip_address, details) VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            if (userId != null) {
+                stmt.setLong(1, userId);
+            } else {
+                stmt.setNull(1, java.sql.Types.BIGINT);
+            }
+
+            stmt.setString(2, username);
+            stmt.setString(3, action);
+            stmt.setString(4, result);
+            stmt.setString(5, ipAddress);
+            stmt.setString(6, details);
+
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Audit log insert failed", e);
         }
+    }
+
+    // Simplified version when only username is available
+    public static void log(String username, String action, String result, String details) {
+        log(null, username, action, result, null, details);
     }
 }
