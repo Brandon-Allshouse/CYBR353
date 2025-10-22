@@ -148,11 +148,11 @@ delivery-system/
   - Redirect based on role (customer/driver/manager/admin dashboards)
 
 ### Integration & BLP Testing
-- [ ] Connect frontend to backend `/login` endpoint
+- [x] Connect frontend to backend `/login` endpoint
 - [ ] Test login with users at different clearance levels
 - [ ] Verify BLP access control prevents unauthorized access
 - [ ] Test with invalid credentials and SQL injection attempts
-- [ ] Verify audit logs capture all access attempts
+- [x] Verify audit logs capture all access attempts
 
 ## Setup Instructions
 
