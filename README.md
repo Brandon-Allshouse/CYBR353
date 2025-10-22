@@ -135,7 +135,7 @@ delivery-system/
   - Validate credentials against hashed passwords
   - Return user role AND clearance level on successful login
   - Log all authentication attempts
-- [ ] Set up HTTP server with `/login` POST endpoint
+- [x] Set up HTTP server with `/login` POST endpoint
 - [x] Implement session management with clearance level tracking
 
 ### Frontend Development
