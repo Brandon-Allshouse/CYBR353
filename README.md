@@ -131,7 +131,7 @@ delivery-system/
   ```
 - [x] Create `User.java` model with clearance level field
 - [x] Create `PasswordUtil.java` - implement salt generation and SHA-256 hashing
-- [ ] Create `AuthenticationController.java`:
+- [x] Create `AuthenticationController.java`:
   - Validate credentials against hashed passwords
   - Return user role AND clearance level on successful login
   - Log all authentication attempts
