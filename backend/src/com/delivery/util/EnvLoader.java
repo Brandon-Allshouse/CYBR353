@@ -15,10 +15,22 @@ public class EnvLoader {
         loadDotEnv();
     }
 
+    private static File findEnvFile() {
+        File dir = new File(".").getAbsoluteFile();
+        while (dir != null) {
+            File envFile = new File(dir, ".env");
+            if (envFile.exists() && envFile.isFile()) {
+                return envFile;
+            }
+            dir = dir.getParentFile();
+        }
+        return null;
+    }
+
     private static void loadDotEnv() {
-        File f = new File(".env");
-        if (!f.exists()) {
-            loadError = ".env file not found";
+        File f = findEnvFile();
+        if (f == null) {
+            loadError = ".env file not found in current or parent directories";
             return;
         }
 
