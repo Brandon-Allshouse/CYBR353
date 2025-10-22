@@ -214,9 +214,10 @@ This is the JDBC driver that lets Java talk to MySQL.
 
 **Option A: Direct Download (Recommended)**
 1. Go to: https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.4.0/
-2. Download: `mysql-connector-j-8.4.0.jar`
+2. Download: `mysql-connector-j-8.4.0.jar` (2.5 MB) - **NOT** the javadoc JAR
 3. Create `backend/lib/` folder if it doesn't exist
 4. Place the JAR file in `backend/lib/`
+5. Verify: `ls -lh backend/lib/mysql-connector-j-8.4.0.jar` should show ~2.5MB file size
 
 **Option B: From MySQL Website**
 1. Go to: https://dev.mysql.com/downloads/connector/j/
@@ -253,10 +254,10 @@ DB_NAME=delivery_system
 DB_USER=root
 DB_PASSWORD=your_actual_mysql_password
 SERVER_PORT=8080
-SESSION_TIMEOUT=30
-AUDIT_LOGGING_ENABLED=true
-LOG_FILE_PATH=logs/audit.log
+SESSION_TIMEOUT_SECONDS=3600
 ```
+
+**Note:** Audit logging is stored in the MySQL `audit_log` table, not in files.
 
 **CRITICAL: Never commit your .env file to Git!**
 
@@ -503,7 +504,7 @@ sudo netstat -tlnp | grep 3306
 - MySQL runs on default `localhost:3306`
 - No HTTPS needed for localhost testing
 - Session management uses in-memory storage (resets on server restart)
-- Sessions automatically expire after 30 minutes of inactivity (configurable via SESSION_TIMEOUT in `.env`)
+- Sessions automatically expire after 1 hour of inactivity (configurable via SESSION_TIMEOUT_SECONDS in `.env`)
 
 ## Environment Variables (.env)
 

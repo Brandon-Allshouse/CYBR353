@@ -6,6 +6,7 @@ import com.delivery.security.AuditLogger;
 import com.delivery.security.SecurityLevel;
 import com.delivery.session.SessionManager;
 import com.delivery.util.PasswordUtil;
+import com.delivery.util.Result;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -25,6 +26,17 @@ import com.sun.net.httpserver.HttpExchange;
 public class AuthenticationController {
 
     public static void handleLogin(HttpExchange exchange) throws IOException {
+        // Add CORS headers for frontend file:// protocol support
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
+
+        // Handle preflight OPTIONS request
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             return;
@@ -36,41 +48,79 @@ public class AuthenticationController {
         String password = parsed.get("password");
 
         if (username == null || password == null) {
-            AuditLogger.log(username == null ? "<unknown>" : username, "LOGIN", "-", "MISSING_CREDENTIALS");
-            respondJson(exchange, 400, "{\"error\":\"username and password required\"}");
+            AuditLogger.log(username == null ? "<unknown>" : username, "LOGIN", "error", "Missing credentials");
+            respondJson(exchange, 400, "{\"message\":\"username and password required\"}");
             return;
         }
 
-        try (Connection c = DatabaseConnection.getConnection()) {
-            String sql = "SELECT id, password_hash, salt, role, clearance FROM users WHERE username = ?";
+        // Get database connection using Result pattern
+        Result<Connection, String> connResult = DatabaseConnection.getConnection();
+        if (connResult.isErr()) {
+            System.err.println("Database connection error: " + connResult.unwrapErr());
+            AuditLogger.log(username, "LOGIN", "error", "Database connection failed");
+            respondJson(exchange, 500, "{\"message\":\"internal error\"}");
+            return;
+        }
+
+        Connection c = connResult.unwrap();
+
+        try {
+            // Fixed SQL: user_id (not id), clearance_level (not clearance)
+            String sql = "SELECT user_id, password_hash, salt, role, clearance_level FROM users WHERE username = ?";
             try (PreparedStatement ps = c.prepareStatement(sql)) {
                 ps.setString(1, username);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (!rs.next()) {
-                        AuditLogger.log(username, "LOGIN", "-", "FAILED_USER_NOT_FOUND");
-                        respondJson(exchange, 401, "{\"error\":\"invalid credentials\"}");
+                        AuditLogger.log(username, "LOGIN", "denied", "User not found");
+                        respondJson(exchange, 401, "{\"message\":\"invalid credentials\"}");
                         return;
                     }
-                    int id = rs.getInt("id");
+                    int id = rs.getInt("user_id");
                     String hash = rs.getString("password_hash");
                     String salt = rs.getString("salt");
                     String role = rs.getString("role");
-                    String clearanceStr = rs.getString("clearance");
+                    int clearanceLevel = rs.getInt("clearance_level");
 
-                    String computed = PasswordUtil.hashPassword(password, salt);
-                    if (!computed.equalsIgnoreCase(hash)) {
-                        AuditLogger.log(username, "LOGIN", "-", "FAILED_BAD_PASSWORD");
-                        respondJson(exchange, 401, "{\"error\":\"invalid credentials\"}");
+                    // Unwrap Result from PasswordUtil.hashPassword
+                    Result<String, String> hashResult = PasswordUtil.hashPassword(password, salt);
+                    if (hashResult.isErr()) {
+                        System.err.println("Password hashing error: " + hashResult.unwrapErr());
+                        AuditLogger.log(username, "LOGIN", "error", "Password hashing failed");
+                        respondJson(exchange, 500, "{\"message\":\"internal error\"}");
                         return;
                     }
 
-                    SecurityLevel clearance = SecurityLevel.fromString(clearanceStr);
+                    String computed = hashResult.unwrap();
+                    if (!computed.equalsIgnoreCase(hash)) {
+                        AuditLogger.log(username, "LOGIN", "denied", "Invalid password");
+                        respondJson(exchange, 401, "{\"message\":\"invalid credentials\"}");
+                        return;
+                    }
+
+                    // Use fromInt() instead of fromString() for clearance_level (TINYINT 0-3)
+                    Result<SecurityLevel, String> clearanceResult = SecurityLevel.fromInt(clearanceLevel);
+                    if (clearanceResult.isErr()) {
+                        System.err.println("Invalid clearance level: " + clearanceResult.unwrapErr());
+                        AuditLogger.log(username, "LOGIN", "error", "Invalid clearance level");
+                        respondJson(exchange, 500, "{\"message\":\"internal error\"}");
+                        return;
+                    }
+
+                    SecurityLevel clearance = clearanceResult.unwrap();
                     User user = new User(id, username, role, clearance);
 
                     String token = SessionManager.createSession(user.getUsername(), user.getRole(), user.getClearance());
-                    AuditLogger.log(username, "LOGIN", "-", "SUCCESS");
+                    AuditLogger.log(username, "LOGIN", "SUCCESS", "Role: " + role + ", Clearance: " + clearanceLevel);
 
-                    String response = String.format("{\"session_token\":\"%s\",\"role\":\"%s\",\"clearance\":\"%s\"}", token, user.getRole(), user.getClearance().name());
+                    // Fixed JSON format to match frontend expectations
+                    // Frontend expects: {username, role, clearanceLevel (number), token}
+                    String response = String.format(
+                        "{\"username\":\"%s\",\"role\":\"%s\",\"clearanceLevel\":%d,\"token\":\"%s\"}",
+                        user.getUsername(),
+                        user.getRole(),
+                        clearanceLevel,
+                        token
+                    );
                     exchange.getResponseHeaders().add("Content-Type", "application/json");
                     // Optionally set cookie
                     exchange.getResponseHeaders().add("Set-Cookie", "SESSION=" + token + "; Path=/; HttpOnly");
@@ -78,8 +128,10 @@ public class AuthenticationController {
                 }
             }
         } catch (SQLException e) {
-            AuditLogger.log(username, "LOGIN", "-", "ERROR_DB");
-            respondJson(exchange, 500, "{\"error\":\"internal error\"}");
+            System.err.println("SQL error: " + e.getMessage());
+            e.printStackTrace();
+            AuditLogger.log(username, "LOGIN", "error", "Database error");
+            respondJson(exchange, 500, "{\"message\":\"internal error\"}");
         }
     }
 
