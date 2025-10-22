@@ -26,8 +26,10 @@ public class Main {
             } catch (NumberFormatException ignored) {}
         }
 
+        //Create new HTTP server bound to the given port
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
+        //Endpoint login
         server.createContext("/login", (exchange) -> {
             AuthenticationController.handleLogin(exchange);
         });
@@ -45,6 +47,7 @@ public class Main {
             }
 
             String token = null;
+            //Attempt to extract token from "Cookie" header
             if (exchange.getRequestHeaders().containsKey("Cookie")) {
                 String cookies = exchange.getRequestHeaders().getFirst("Cookie");
                 for (String c : cookies.split(";")) {
@@ -83,6 +86,7 @@ public class Main {
         });
 
         server.setExecutor(Executors.newFixedThreadPool(8));
+        //Start HTTP server
         server.start();
 
         System.out.println("========================================");
