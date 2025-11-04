@@ -1,3 +1,23 @@
+  Solution 1: Use PowerShell (Recommended)
+
+  PowerShell supports ** globs. Have them run:
+  javac -cp ".;..\lib\mysql-connector-j-8.4.0.jar" (Get-ChildItem -Path com\delivery -Recurse -Filter
+  *.java | ForEach-Object { $_.FullName })
+
+  Or simpler, compile from the parent directory:
+  javac -cp ".;lib\mysql-connector-j-8.4.0.jar" @(Get-ChildItem -Path src\com\delivery -Recurse
+  -Filter *.java).FullName
+
+  Solution 2: List files explicitly in cmd.exe
+
+  From the backend\src directory:
+  javac -cp ".;..\lib\mysql-connector-j-8.4.0.jar" com\delivery\Main.java
+  com\delivery\controllers\*.java com\delivery\security\*.java com\delivery\util\*.java
+  com\delivery\session\*.java com\delivery\database\*.java com\delivery\models\*.java
+
+
+
+
 # Optimized Delivery System
 
 **Team Members:** Brody Scott, Dawson Pfabe, Brandon Allshouse, Tyler Slack  
