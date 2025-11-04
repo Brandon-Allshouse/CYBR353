@@ -529,3 +529,10 @@ A `.env` file stores sensitive configuration (like database passwords) that shou
 - Write access: Users can only write to data at or above their clearance level
 - All access attempts logged to `audit_log` table
 - Failed BLP checks return "Access Denied" with reason logged
+
+'''
+javac -cp ".;..\lib\mysql-connector-j-8.4.0.jar" (Get-ChildItem -Path com\delivery -Recurse -Filter *.java | ForEach-Object { $_.FullName })
+
+
+java -cp ".;..\lib\mysql-connector-j-8.4.0.jar" com.delivery.Main  
+'''
