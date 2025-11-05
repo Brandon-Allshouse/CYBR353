@@ -65,7 +65,6 @@ public class AuthenticationController {
         Connection c = connResult.unwrap();
 
         try {
-            // Fixed SQL: user_id (not id), clearance_level (not clearance)
             String sql = "SELECT user_id, password_hash, salt, role, clearance_level FROM users WHERE username = ?";
             try (PreparedStatement ps = c.prepareStatement(sql)) {
                 ps.setString(1, username);
@@ -97,7 +96,7 @@ public class AuthenticationController {
                         return;
                     }
 
-                    // Use fromInt() instead of fromString() for clearance_level (TINYINT 0-3)
+                    // Use fromInt() instead of fromString() for clearance_level
                     Result<SecurityLevel, String> clearanceResult = SecurityLevel.fromInt(clearanceLevel);
                     if (clearanceResult.isErr()) {
                         System.err.println("Invalid clearance level: " + clearanceResult.unwrapErr());
@@ -112,7 +111,6 @@ public class AuthenticationController {
                     String token = SessionManager.createSession(user.getUsername(), user.getRole(), user.getClearance());
                     AuditLogger.log(username, "LOGIN", "SUCCESS", "Role: " + role + ", Clearance: " + clearanceLevel);
 
-                    // Fixed JSON format to match frontend expectations
                     // Frontend expects: {username, role, clearanceLevel (number), token}
                     String response = String.format(
                         "{\"username\":\"%s\",\"role\":\"%s\",\"clearanceLevel\":%d,\"token\":\"%s\"}",

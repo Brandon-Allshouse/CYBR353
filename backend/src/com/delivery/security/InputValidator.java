@@ -1,6 +1,7 @@
 package com.delivery.security;
 
 import com.delivery.util.ValidationResult;
+import com.delivery.util.Result;
 
 /**
  * Validates all user inputs according to business rules and security policies
@@ -21,18 +22,21 @@ public class InputValidator {
         }
         
         // Validate email
-        if (!InputSanitizer.isValidEmail(email)) {
-            result.addError("Invalid email format");
+        Result<Boolean, String> emailResult = InputSanitizer.validateEmail(email);
+        if (emailResult.isErr()) {
+            result.addError(emailResult.unwrapErr());
         }
         
         // Validate phone
-        if (!InputSanitizer.isValidPhone(phone)) {
-            result.addError("Invalid phone number format");
+        Result<Boolean, String> phoneResult = InputSanitizer.validatePhone(phone);
+        if (phoneResult.isErr()) {
+            result.addError(phoneResult.unwrapErr());
         }
         
         // Validate password
-        if (!PasswordManager.validatePasswordStrength(password)) {
-            result.addError("Password must be at least 12 characters with uppercase, lowercase, digit, and special character");
+        Result<Boolean, String> passwordResult = PasswordManager.validatePasswordStrength(password);
+        if (passwordResult.isErr()) {
+            result.addError(passwordResult.unwrapErr());
         }
         
         return result;
@@ -67,8 +71,9 @@ public class InputValidator {
     public static ValidationResult validateTrackingId(String trackingId) {
         ValidationResult result = new ValidationResult();
         
-        if (!InputSanitizer.isValidTrackingId(trackingId)) {
-            result.addError("Invalid tracking ID format (expected: D-XXX-XXX)");
+        Result<Boolean, String> trackingResult = InputSanitizer.validateTrackingId(trackingId);
+        if (trackingResult.isErr()) {
+            result.addError(trackingResult.unwrapErr());
         }
         
         return result;
@@ -79,8 +84,11 @@ public class InputValidator {
         
         if (email == null || email.trim().isEmpty()) {
             result.addError("Email is required");
-        } else if (!InputSanitizer.isValidEmail(email)) {
-            result.addError("Invalid email format");
+        } else {
+            Result<Boolean, String> emailResult = InputSanitizer.validateEmail(email);
+            if (emailResult.isErr()) {
+                result.addError(emailResult.unwrapErr());
+            }
         }
         
         if (password == null || password.isEmpty()) {
@@ -150,8 +158,9 @@ public class InputValidator {
         }
         
         if (phone != null && !phone.isEmpty()) {
-            if (!InputSanitizer.isValidPhone(phone)) {
-                result.addError("Invalid phone number format");
+            Result<Boolean, String> phoneResult = InputSanitizer.validatePhone(phone);
+            if (phoneResult.isErr()) {
+                result.addError(phoneResult.unwrapErr());
             }
         }
         

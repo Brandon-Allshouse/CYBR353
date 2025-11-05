@@ -1,81 +1,90 @@
 package com.delivery.security;
 
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
+import com.delivery.util.Result;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 
 public class PasswordManager {
     
-    // Security configuration constants
-    private static final int SALT_LENGTH = 32;
-    private static final int HASH_ITERATIONS = 10000;
-    private static final int HASH_LENGTH = 256;
-    
+    private static final SecureRandom random = new SecureRandom();
+    private static final int SALT_LENGTH = 16;
+
+    /**
+     * Generates a cryptographically secure random salt
+     */
     public static String generateSalt() {
-        SecureRandom random = new SecureRandom();
-        byte[] salt = new byte[SALT_LENGTH];
-        random.nextBytes(salt);
-        return Base64.getEncoder().encodeToString(salt);
+        byte[] saltBytes = new byte[SALT_LENGTH];
+        random.nextBytes(saltBytes);
+        return Base64.getEncoder().encodeToString(saltBytes);
     }
-    
-    public static String hashPassword(String password, String salt) 
-            throws NoSuchAlgorithmException, InvalidKeySpecException {
-        
-        byte[] saltBytes = Base64.getDecoder().decode(salt);
-        PBEKeySpec spec = new PBEKeySpec(
-            password.toCharArray(), 
-            saltBytes, 
-            HASH_ITERATIONS, 
-            HASH_LENGTH
-        );
-        
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        byte[] hash = factory.generateSecret(spec).getEncoded();
-        
-        // Clear sensitive data
-        spec.clearPassword();
-        
-        return Base64.getEncoder().encodeToString(hash);
-    }
-    
-    public static boolean verifyPassword(String password, String salt, String expectedHash) {
+
+    /**
+     * Hashes a password with the provided salt using SHA-256
+     */
+    public static Result<String, String> hashPassword(String password, String salt) {
+        if (password == null || salt == null) {
+            return Result.err("Password and salt cannot be null");
+        }
+
         try {
-            String computedHash = hashPassword(password, salt);
-            return computedHash.equals(expectedHash);
-        } catch (Exception e) {
-            AuditLogger.logSecurityEvent("PASSWORD_VERIFICATION_ERROR", 
-                "Error verifying password", "SYSTEM");
-            return false;
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(password.getBytes());
+            byte[] hashed = md.digest(salt.getBytes());
+            return Result.ok(bytesToHex(hashed));
+        } catch (NoSuchAlgorithmException e) {
+            return Result.err("SHA-256 algorithm not available: " + e.getMessage());
         }
     }
-    
-    public static boolean validatePasswordStrength(String password) {
-        if (password == null || password.length() < 12) {
-            return false;
+
+    /**
+     * Verifies a password against a stored hash
+     */
+    public static Result<Boolean, String> verifyPassword(String password, String salt, String expectedHash) {
+        Result<String, String> hashResult = hashPassword(password, salt);
+        
+        if (hashResult.isErr()) {
+            return Result.err(hashResult.unwrapErr());
         }
         
-        // Check for uppercase, lowercase, digit, and special character
-        boolean hasUpper = !password.equals(password.toLowerCase());
-        boolean hasLower = !password.equals(password.toUpperCase());
-        boolean hasDigit = password.matches(".*\\d.*");
-        boolean hasSpecial = password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*");
+        String computedHash = hashResult.unwrap();
+        boolean matches = computedHash.equalsIgnoreCase(expectedHash);
         
-        return hasUpper && hasLower && hasDigit && hasSpecial;
+        return Result.ok(matches);
     }
-    
-    public static int getPasswordStrength(String password) {
-        if (password == null) return 0;
-        
-        int score = 0;
-        if (password.length() >= 12) score++;
-        if (password.matches(".*[A-Z].*")) score++;
-        if (password.matches(".*[a-z].*")) score++;
-        if (password.matches(".*\\d.*")) score++;
-        if (password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*")) score++;
-        
-        return Math.min(score, 4);
+
+    /**
+     * Validates password strength according to security policy
+     */
+    public static Result<Boolean, String> validatePasswordStrength(String password) {
+        if (password == null) {
+            return Result.err("Password cannot be null");
+        }
+        if (password.length() < 8) {
+            return Result.err("Password must be at least 8 characters long");
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            return Result.err("Password must contain at least one uppercase letter");
+        }
+        if (!password.matches(".*[a-z].*")) {
+            return Result.err("Password must contain at least one lowercase letter");
+        }
+        if (!password.matches(".*\\d.*")) {
+            return Result.err("Password must contain at least one digit");
+        }
+        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*")) {
+            return Result.err("Password must contain at least one special character");
+        }
+
+        return Result.ok(true);
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }

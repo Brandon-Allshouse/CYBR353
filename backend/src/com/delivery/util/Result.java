@@ -2,10 +2,6 @@ package com.delivery.util;
 
 import java.util.function.Function;
 
-/**
- * Type-safe error handling container. Forces explicit handling of success/failure cases.
- * Replaces exception-based error handling for security and performance.
- */
 public abstract class Result<T, E> {
 
     // Private constructor prevents external instantiation

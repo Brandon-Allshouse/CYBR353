@@ -1,9 +1,5 @@
 package com.delivery.util;
 
-/**
- * ValidationResult - Encapsulates validation results with error messages
- * Used throughout the system for input validation
- */
 public class ValidationResult {
     private boolean valid = true;
     private StringBuilder errors = new StringBuilder();

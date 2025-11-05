@@ -16,8 +16,6 @@ import java.util.concurrent.Executors;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        // Fixed: EnvLoader.get() returns Result<String, String>
-        // Fixed: Use SERVER_PORT (not HTTP_PORT) to match .env.example
         Result<String, String> portResult = EnvLoader.get("SERVER_PORT");
         int port = 8080;  // Default to 8080 to match README
         if (portResult.isOk()) {
@@ -64,7 +62,6 @@ public class Main {
                 if (auth.startsWith("Bearer ")) token = auth.substring(7);
             }
 
-            // Fixed: SessionManager.getSession() returns Result<Session, String>
             Result<SessionManager.Session, String> sessionResult = SessionManager.getSession(token);
             if (sessionResult.isErr()) {
                 AuditLogger.log("<unknown>", "WHOAMI", "UNAUTHORIZED", sessionResult.unwrapErr());

@@ -1,5 +1,6 @@
 package com.delivery.security;
 
+import com.delivery.util.Result;
 import java.util.regex.Pattern;
 
 public class InputSanitizer {
@@ -11,14 +12,17 @@ public class InputSanitizer {
     private static final Pattern PHONE_PATTERN = Pattern.compile(
         "^[+]?[(]?[0-9]{3}[)]?[-\\s.]?[0-9]{3}[-\\s.]?[0-9]{4,6}$"
     );
-    private static final Pattern ALPHANUMERIC_PATTERN = Pattern.compile("^[a-zA-Z0-9\\s]+$");
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,20}$");
     private static final Pattern TRACKING_ID_PATTERN = Pattern.compile("^D-[0-9]{3}-[0-9]{3}$");
-    
-    public static String sanitizeString(String input) {
+
+    /**
+     * Sanitizes string input by removing dangerous characters
+     */
+    public static Result<String, String> sanitizeString(String input) {
         if (input == null) {
-            return null;
+            return Result.err("Input cannot be null");
         }
-        
+
         // Remove SQL injection attempts
         String sanitized = input.replaceAll("['\"\\\\;]", "");
         
@@ -26,106 +30,139 @@ public class InputSanitizer {
         sanitized = sanitized.replaceAll("<script.*?>.*?</script>", "");
         sanitized = sanitized.replaceAll("<.*?>", "");
         
-        // Remove potential command injection characters
+        // Remove command injection characters
         sanitized = sanitized.replaceAll("[;&|`$()]", "");
         
         // Remove null bytes
         sanitized = sanitized.replace("\0", "");
         
-        return sanitized.trim();
+        return Result.ok(sanitized.trim());
     }
-    
- 
-    public static String sanitizeForSQL(String input) {
-        if (input == null) {
-            return null;
+
+    /**
+     * Validates email format
+     */
+    public static Result<Boolean, String> validateEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return Result.err("Email cannot be empty");
         }
         
-        // Remove SQL dangerous characters
-        String sanitized = input.replaceAll("['\"\\\\]", "");
-        sanitized = sanitized.replaceAll("--", "");
-        sanitized = sanitized.replaceAll(";", "");
-        sanitized = sanitized.replaceAll("/\\*.*?\\*/", ""); // Remove SQL comments
-        
-        return sanitized.trim();
-    }
-    
- 
-    public static boolean isValidEmail(String email) {
-        return email != null && EMAIL_PATTERN.matcher(email).matches();
-    }
-    
-    public static boolean isValidPhone(String phone) {
-        return phone != null && PHONE_PATTERN.matcher(phone).matches();
-    }
-    
-    public static boolean isValidTrackingId(String trackingId) {
-        return trackingId != null && TRACKING_ID_PATTERN.matcher(trackingId).matches();
-    }
-    
-    public static boolean isAlphanumeric(String input) {
-        return input != null && ALPHANUMERIC_PATTERN.matcher(input).matches();
-    }
-    
-    public static boolean isValidIntegerRange(int value, int min, int max) {
-        return value >= min && value <= max;
-    }
-    
-    public static String sanitizeFilename(String filename) {
-        if (filename == null) {
-            return null;
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            return Result.err("Invalid email format");
         }
         
-        // Remove path traversal attempts
-        String sanitized = filename.replaceAll("\\.\\.", "");
-        sanitized = sanitized.replaceAll("[/\\\\]", "");
-        
-        // Remove dangerous characters
-        sanitized = sanitized.replaceAll("[^a-zA-Z0-9._-]", "");
-        
-        return sanitized.trim();
+        return Result.ok(true);
     }
-    public static boolean isValidURL(String url) {
-        if (url == null) {
-            return false;
+
+    /**
+     * Validates phone number format
+     */
+    public static Result<Boolean, String> validatePhone(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return Result.err("Phone number cannot be empty");
         }
+        
+        if (!PHONE_PATTERN.matcher(phone).matches()) {
+            return Result.err("Invalid phone number format");
+        }
+        
+        return Result.ok(true);
+    }
+
+    /**
+     * Validates username format
+     */
+    public static Result<Boolean, String> validateUsername(String username) {
+        if (username == null || username.trim().isEmpty()) {
+            return Result.err("Username cannot be empty");
+        }
+        
+        if (!USERNAME_PATTERN.matcher(username).matches()) {
+            return Result.err("Username must be 3-20 characters (letters, numbers, underscore only)");
+        }
+        
+        return Result.ok(true);
+    }
+
+    /**
+     * Validates tracking ID format
+     */
+    public static Result<Boolean, String> validateTrackingId(String trackingId) {
+        if (trackingId == null || trackingId.trim().isEmpty()) {
+            return Result.err("Tracking ID cannot be empty");
+        }
+        
+        if (!TRACKING_ID_PATTERN.matcher(trackingId).matches()) {
+            return Result.err("Invalid tracking ID format (expected: D-XXX-XXX)");
+        }
+        
+        return Result.ok(true);
+    }
+
+    /**
+     * Validates URL format
+     */
+    public static Result<Boolean, String> validateURL(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return Result.err("URL cannot be empty");
+        }
+
+        String lowerUrl = url.toLowerCase();
         
         // Check for dangerous protocols
-        String lowerUrl = url.toLowerCase();
         if (lowerUrl.startsWith("javascript:") || 
             lowerUrl.startsWith("data:") || 
             lowerUrl.startsWith("vbscript:")) {
-            return false;
+            return Result.err("Dangerous URL protocol detected");
         }
-        
-        // Must start with http or https
-        return lowerUrl.startsWith("http://") || lowerUrl.startsWith("https://");
+
+        if (!lowerUrl.startsWith("http://") && !lowerUrl.startsWith("https://")) {
+            return Result.err("URL must start with http:// or https://");
+        }
+
+        return Result.ok(true);
     }
-    
-    public static String encodeHTML(String input) {
+
+    /**
+     * Validates string length
+     */
+    public static Result<Boolean, String> validateLength(String input, int maxLength) {
         if (input == null) {
-            return null;
+            return Result.err("Input cannot be null");
         }
-        
-        return input.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace("\"", "&quot;")
-                   .replace("'", "&#x27;")
-                   .replace("/", "&#x2F;");
-    }
-    
-    public static boolean isValidLength(String input, int maxLength) {
-        return input != null && input.length() <= maxLength;
-    }
-    
-    public static String sanitizeAddress(String address) {
-        if (address == null) {
-            return null;
+
+        if (input.length() > maxLength) {
+            return Result.err("Input exceeds maximum length of " + maxLength + " characters");
         }
-        
-        // Remove dangerous characters
-        String sanitized = address.replaceAll("[<>\"';\\\\]", "");
-        return sanitized.trim();
+
+        return Result.ok(true);
+    }
+
+    /**
+     * Validates integer within range
+     */
+    public static Result<Boolean, String> validateIntegerRange(int value, int min, int max) {
+        if (value < min || value > max) {
+            return Result.err("Value must be between " + min + " and " + max);
+        }
+        return Result.ok(true);
+    }
+
+    /**
+     * Encodes HTML entities to prevent XSS
+     */
+    public static Result<String, String> encodeHTML(String input) {
+        if (input == null) {
+            return Result.err("Input cannot be null");
+        }
+
+        String encoded = input.replace("&", "&amp;")
+                             .replace("<", "&lt;")
+                             .replace(">", "&gt;")
+                             .replace("\"", "&quot;")
+                             .replace("'", "&#x27;")
+                             .replace("/", "&#x2F;");
+
+        return Result.ok(encoded);
     }
 }
