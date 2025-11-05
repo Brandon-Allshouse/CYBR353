@@ -45,9 +45,4 @@ public class AuditLogger {
             return Result.err("Audit log insert failed: " + e.getMessage());
         }
     }
-
-    // Convenience method when only basic info is available
-    public static Result<Void, String> log(String username, String action, String result, String details) {
-        return log(null, username, action, result, null, details);
     }
-}
