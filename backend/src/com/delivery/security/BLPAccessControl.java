@@ -2,47 +2,49 @@ package com.delivery.security;
 
 import com.delivery.util.Result;
 
+/**
+ * Implements Bell-LaPadula (BLP) mandatory access control model
+ * Enforces "no read up" and "no write down" security properties
+ */
 public class BLPAccessControl {
 
     /**
-     * Check if subject can read object
+     * Simple Security Property ("no read up"): subject can only read objects at or below their clearance
+     * Example: CONFIDENTIAL user can read UNCLASSIFIED and CONFIDENTIAL, but not SECRET
      */
     public static boolean checkReadAccess(SecurityLevel subjectClearance, SecurityLevel objectClassification) {
-        // Can read if subject's clearance >= object's classification
         boolean allowed = subjectClearance.ordinal() >= objectClassification.ordinal();
-        
+
         if (!allowed) {
-            AuditLogger.logSecurityEvent("BLP_READ_DENIED", 
-                String.format("Read denied: %s cannot read %s", 
+            AuditLogger.logSecurityEvent("BLP_READ_DENIED",
+                String.format("Read denied: %s cannot read %s",
                     subjectClearance.name(), objectClassification.name()),
                 "SYSTEM");
         }
-        
+
         return allowed;
     }
 
     /**
-     * Check if subject can write to object
+     * Star Property ("no write down"): subject can only write to objects at or above their clearance
+     * Prevents classified information from being leaked to lower security levels
+     * Example: SECRET user cannot write to CONFIDENTIAL objects
      */
     public static boolean checkWriteAccess(SecurityLevel subjectClearance, SecurityLevel objectClassification) {
-        // Can write if subject's clearance <= object's classification
         boolean allowed = subjectClearance.ordinal() <= objectClassification.ordinal();
-        
+
         if (!allowed) {
             AuditLogger.logSecurityEvent("BLP_WRITE_DENIED",
                 String.format("Write denied: %s cannot write to %s",
                     subjectClearance.name(), objectClassification.name()),
                 "SYSTEM");
         }
-        
+
         return allowed;
     }
 
-    /**
-     * Comprehensive access check with operation type
-     */
-    public static Result<Boolean, String> checkAccess(SecurityLevel subjectClearance, 
-                                                      SecurityLevel objectClassification, 
+    public static Result<Boolean, String> checkAccess(SecurityLevel subjectClearance,
+                                                      SecurityLevel objectClassification,
                                                       String operation) {
         if (subjectClearance == null) {
             return Result.err("Subject clearance cannot be null");
@@ -64,7 +66,8 @@ public class BLPAccessControl {
     }
 
     /**
-     * Gets the classification level for different data types
+     * Maps business data types to BLP classification levels
+     * Default to TOP_SECRET for unknown types (fail-secure)
      */
     public static SecurityLevel getDataClassification(String dataType) {
         if (dataType == null) {

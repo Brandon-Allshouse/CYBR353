@@ -6,11 +6,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+/**
+ * Centralized audit logging for security events and access attempts
+ * All entries written to audit_log table with timestamp, user, action, result, IP, and details
+ */
 public class AuditLogger {
 
-    /**
-     * Inserts audit record into audit_log table
-     */
+    // Synchronized to prevent race conditions when multiple threads log simultaneously
     public static synchronized Result<Void, String> log(Long userId, String username, String action,
                                                          String result, String ipAddress, String details) {
         if (username == null || action == null || result == null) {
@@ -48,40 +50,28 @@ public class AuditLogger {
         }
     }
 
-    /**
-     * Simplified log without userId and ipAddress
-     */
+    // Convenience overloads for common logging scenarios
     public static Result<Void, String> log(String username, String action, String result, String details) {
         return log(null, username, action, result, null, details);
     }
 
-    /**
-     * Log with userId
-     */
     public static Result<Void, String> log(Long userId, String username, String action, String result, String details) {
         return log(userId, username, action, result, null, details);
     }
 
-    /**
-     * Log security event
-     */
     public static Result<Void, String> logSecurityEvent(String eventType, String description, String userId) {
         String result = determineResult(eventType);
         return log(null, userId, eventType, result, null, description);
     }
 
-    /**
-     * Log error with stack trace
-     */
+    // Stack traces truncated to 500 chars to prevent log bloat
     public static Result<Void, String> logError(String errorType, String errorMessage, String userId, String stackTrace) {
-        String details = String.format("Error: %s\nStack: %s", errorMessage, 
+        String details = String.format("Error: %s\nStack: %s", errorMessage,
                                       stackTrace != null ? stackTrace.substring(0, Math.min(500, stackTrace.length())) : "");
         return log(null, userId, errorType, "ERROR", null, details);
     }
 
-    /**
-     * Determine result based on event type
-     */
+    // Maps event type keywords to result status for consistent categorization
     private static String determineResult(String eventType) {
         if (eventType.contains("SUCCESS") || eventType.contains("CREATED")) {
             return "SUCCESS";

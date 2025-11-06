@@ -8,6 +8,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * In-memory session management with automatic expiry and extension
+ * Sessions timeout after configured period (default 1 hour) and extend on each access
+ */
 public class SessionManager {
     private static final Map<String, Session> sessions = new ConcurrentHashMap<>();
     private static final long timeoutSeconds;
@@ -31,7 +35,6 @@ public class SessionManager {
         }
     }
 
-    // Creates new session and returns token
     public static String createSession(String username, String role, SecurityLevel clearance) {
         String token = UUID.randomUUID().toString();
         Instant expiry = Instant.now().plusSeconds(timeoutSeconds);
@@ -39,7 +42,7 @@ public class SessionManager {
         return token;
     }
 
-    // Retrieves session by token, extending expiry if valid
+    // Sliding window expiry: each access extends session lifetime
     public static Result<Session, String> getSession(String token) {
         if (token == null || token.isEmpty()) {
             return Result.err("Token is required");

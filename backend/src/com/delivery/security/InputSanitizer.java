@@ -3,9 +3,12 @@ package com.delivery.security;
 import com.delivery.util.Result;
 import java.util.regex.Pattern;
 
+/**
+ * Input validation and sanitization to prevent injection attacks
+ * Defends against SQL injection, XSS, command injection, and path traversal
+ */
 public class InputSanitizer {
-    
-    // Regex patterns for validation
+
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
         "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
     );
@@ -15,33 +18,21 @@ public class InputSanitizer {
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_]{3,20}$");
     private static final Pattern TRACKING_ID_PATTERN = Pattern.compile("^D-[0-9]{3}-[0-9]{3}$");
 
-    /**
-     * Sanitizes string input by removing dangerous characters
-     */
+    // Multi-layered defense: removes SQL, XSS, command injection, and null byte attacks
     public static Result<String, String> sanitizeString(String input) {
         if (input == null) {
             return Result.err("Input cannot be null");
         }
 
-        // Remove SQL injection attempts
         String sanitized = input.replaceAll("['\"\\\\;]", "");
-        
-        // Remove script tags and HTML
         sanitized = sanitized.replaceAll("<script.*?>.*?</script>", "");
         sanitized = sanitized.replaceAll("<.*?>", "");
-        
-        // Remove command injection characters
         sanitized = sanitized.replaceAll("[;&|`$()]", "");
-        
-        // Remove null bytes
         sanitized = sanitized.replace("\0", "");
-        
+
         return Result.ok(sanitized.trim());
     }
 
-    /**
-     * Validates email format
-     */
     public static Result<Boolean, String> validateEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
             return Result.err("Email cannot be empty");
@@ -54,9 +45,6 @@ public class InputSanitizer {
         return Result.ok(true);
     }
 
-    /**
-     * Validates phone number format
-     */
     public static Result<Boolean, String> validatePhone(String phone) {
         if (phone == null || phone.trim().isEmpty()) {
             return Result.err("Phone number cannot be empty");
@@ -69,9 +57,6 @@ public class InputSanitizer {
         return Result.ok(true);
     }
 
-    /**
-     * Validates username format
-     */
     public static Result<Boolean, String> validateUsername(String username) {
         if (username == null || username.trim().isEmpty()) {
             return Result.err("Username cannot be empty");
@@ -84,9 +69,6 @@ public class InputSanitizer {
         return Result.ok(true);
     }
 
-    /**
-     * Validates tracking ID format
-     */
     public static Result<Boolean, String> validateTrackingId(String trackingId) {
         if (trackingId == null || trackingId.trim().isEmpty()) {
             return Result.err("Tracking ID cannot be empty");
@@ -99,19 +81,16 @@ public class InputSanitizer {
         return Result.ok(true);
     }
 
-    /**
-     * Validates URL format
-     */
+    // Prevents XSS via javascript:, data:, and vbscript: URL schemes
     public static Result<Boolean, String> validateURL(String url) {
         if (url == null || url.trim().isEmpty()) {
             return Result.err("URL cannot be empty");
         }
 
         String lowerUrl = url.toLowerCase();
-        
-        // Check for dangerous protocols
-        if (lowerUrl.startsWith("javascript:") || 
-            lowerUrl.startsWith("data:") || 
+
+        if (lowerUrl.startsWith("javascript:") ||
+            lowerUrl.startsWith("data:") ||
             lowerUrl.startsWith("vbscript:")) {
             return Result.err("Dangerous URL protocol detected");
         }
@@ -123,9 +102,6 @@ public class InputSanitizer {
         return Result.ok(true);
     }
 
-    /**
-     * Validates string length
-     */
     public static Result<Boolean, String> validateLength(String input, int maxLength) {
         if (input == null) {
             return Result.err("Input cannot be null");
@@ -138,9 +114,6 @@ public class InputSanitizer {
         return Result.ok(true);
     }
 
-    /**
-     * Validates integer within range
-     */
     public static Result<Boolean, String> validateIntegerRange(int value, int min, int max) {
         if (value < min || value > max) {
             return Result.err("Value must be between " + min + " and " + max);
@@ -148,9 +121,7 @@ public class InputSanitizer {
         return Result.ok(true);
     }
 
-    /**
-     * Encodes HTML entities to prevent XSS
-     */
+    // Encodes special characters to prevent reflected XSS in HTML contexts
     public static Result<String, String> encodeHTML(String input) {
         if (input == null) {
             return Result.err("Input cannot be null");
