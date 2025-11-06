@@ -5,6 +5,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 
+/**
+ * Password hashing utilities using SHA-256(password + salt)
+ * IMPORTANT: Hash algorithm must match schema.sql test user generation
+ */
 public class PasswordUtil {
     private static final SecureRandom random = new SecureRandom();
 
@@ -14,7 +18,6 @@ public class PasswordUtil {
         return Base64.getEncoder().encodeToString(s);
     }
 
-    // Returns SHA-256(password + salt) hash or error message
     public static Result<String, String> hashPassword(String password, String salt) {
         if (password == null || salt == null) {
             return Result.err("Password and salt cannot be null");

@@ -17,24 +17,22 @@ import java.util.concurrent.Executors;
 public class Main {
     public static void main(String[] args) throws IOException {
         Result<String, String> portResult = EnvLoader.get("SERVER_PORT");
-        int port = 8080;  // Default to 8080 to match README
+        int port = 8080;
         if (portResult.isOk()) {
             try {
                 port = Integer.parseInt(portResult.unwrap());
             } catch (NumberFormatException ignored) {}
         }
 
-        //Create new HTTP server bound to the given port
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-        //Endpoint login
         server.createContext("/login", (exchange) -> {
             AuthenticationController.handleLogin(exchange);
         });
 
-        // Example protected endpoint to check session
+        // Protected endpoint for session verification - demonstrates BLP clearance levels in response
         server.createContext("/whoami", (exchange) -> {
-            // Add CORS headers
+            // CORS headers required for browser-based clients (e.g., file:// protocol frontends)
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
             exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -44,8 +42,8 @@ public class Main {
                 return;
             }
 
+            // Support dual authentication: HTTP-only cookies (more secure) or Bearer tokens (API clients)
             String token = null;
-            //Attempt to extract token from "Cookie" header
             if (exchange.getRequestHeaders().containsKey("Cookie")) {
                 String cookies = exchange.getRequestHeaders().getFirst("Cookie");
                 for (String c : cookies.split(";")) {
@@ -56,7 +54,6 @@ public class Main {
                     }
                 }
             }
-            // Alternatively accept Authorization Bearer <token>
             if (token == null && exchange.getRequestHeaders().containsKey("Authorization")) {
                 String auth = exchange.getRequestHeaders().getFirst("Authorization");
                 if (auth.startsWith("Bearer ")) token = auth.substring(7);
@@ -82,8 +79,8 @@ public class Main {
             exchange.getResponseBody().close();
         });
 
+        // Thread pool sized for moderate concurrent load - adjust based on production needs
         server.setExecutor(Executors.newFixedThreadPool(8));
-        //Start HTTP server
         server.start();
 
         System.out.println("========================================");

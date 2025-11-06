@@ -171,3 +171,4 @@ if (document.readyState === 'loading') {
     new AuthHandler();
 
 }
+

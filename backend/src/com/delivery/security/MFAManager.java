@@ -7,21 +7,21 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+/**
+ * Two-factor authentication using time-limited numeric codes
+ * Codes are single-use, expire after 5 minutes, and stored in database
+ */
 public class MFAManager {
-    
+
     private static final int MFA_CODE_LENGTH = 6;
     private static final int MFA_EXPIRY_MINUTES = 5;
     private static final SecureRandom random = new SecureRandom();
 
-    /**
-     * Generates a 6-digit MFA code and stores it in database
-     */
     public static Result<String, String> generateMFACode(Long userId, String username) {
         if (userId == null || username == null) {
             return Result.err("User ID and username are required");
         }
 
-        // Generate 6-digit code
         int code = 100000 + random.nextInt(900000);
         String mfaCode = String.valueOf(code);
 
@@ -31,7 +31,6 @@ public class MFAManager {
         }
 
         try (Connection conn = connResult.unwrap()) {
-            // Calculate expiry time
             Timestamp expiryTime = Timestamp.from(Instant.now().plus(MFA_EXPIRY_MINUTES, ChronoUnit.MINUTES));
 
             String sql = "INSERT INTO mfa_codes (user_id, code, expiry_time, used, created_at) " +
@@ -43,10 +42,10 @@ public class MFAManager {
                 stmt.setTimestamp(3, expiryTime);
                 stmt.executeUpdate();
 
-                AuditLogger.log(userId, username, "MFA_CODE_GENERATED", "SUCCESS", 
+                AuditLogger.log(userId, username, "MFA_CODE_GENERATED", "SUCCESS",
                               "MFA code generated");
 
-                // In production, send via email/SMS
+                // TODO: Replace console output with email/SMS delivery service
                 System.out.println("========================================");
                 System.out.println("MFA CODE for " + username + ": " + mfaCode);
                 System.out.println("Expires in " + MFA_EXPIRY_MINUTES + " minutes");
@@ -61,9 +60,7 @@ public class MFAManager {
         }
     }
 
-    /**
-     * Validates an MFA code against the database
-     */
+    // Validates code and marks as used to prevent replay attacks
     public static Result<Boolean, String> validateMFACode(Long userId, String username, String code) {
         if (userId == null || code == null) {
             return Result.err("User ID and code are required");
@@ -91,18 +88,17 @@ public class MFAManager {
                     if (rs.next()) {
                         int codeId = rs.getInt("code_id");
 
-                        // Mark code as used
                         String updateSql = "UPDATE mfa_codes SET used = TRUE WHERE code_id = ?";
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
                             updateStmt.setInt(1, codeId);
                             updateStmt.executeUpdate();
                         }
 
-                        AuditLogger.log(userId, username, "MFA_VALIDATION", "SUCCESS", 
+                        AuditLogger.log(userId, username, "MFA_VALIDATION", "SUCCESS",
                                       "MFA code validated successfully");
                         return Result.ok(true);
                     } else {
-                        AuditLogger.log(userId, username, "MFA_VALIDATION", "DENIED", 
+                        AuditLogger.log(userId, username, "MFA_VALIDATION", "DENIED",
                                       "Invalid or expired MFA code");
                         return Result.ok(false);
                     }
@@ -115,9 +111,6 @@ public class MFAManager {
         }
     }
 
-    /**
-     * Cleans up expired MFA codes
-     */
     public static Result<Integer, String> cleanupExpiredCodes() {
         Result<Connection, String> connResult = DatabaseConnection.getConnection();
         if (connResult.isErr()) {
