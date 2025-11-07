@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 public class Main {
     public static void main(String[] args) throws IOException {
         Result<String, String> portResult = EnvLoader.get("SERVER_PORT");
-        int port = 8080;
+        int port = 8081;
         if (portResult.isOk()) {
             try {
                 port = Integer.parseInt(portResult.unwrap());
