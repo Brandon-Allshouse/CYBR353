@@ -932,7 +932,7 @@ sudo netstat -tlnp | grep 3306
 - [x] Insert test users with different clearance levels
 - [x] Create `security_labels` table for BLP object classification
 - [x] Create `audit_log` table for tracking access attempts
-- [ ] Add `failed_attempts` and `lockout_until` columns to `users` table
+- [x] Add `failed_attempts` and `lockout_until` columns to `users` table
 - [ ] Create `mfa_codes` table for two-factor authentication
 
 ### Backend - Security Layer
@@ -975,8 +975,8 @@ sudo netstat -tlnp | grep 3306
 ### Integration & BLP Testing
 - [x] Connect frontend to backend `/login` endpoint
 - [x] Implement comprehensive audit logging
-- [ ] Test login with users at different clearance levels
+- [x] Test login with users at different clearance levels
 - [ ] Verify BLP access control prevents unauthorized access on dashboards
-- [ ] Test with invalid credentials and SQL injection attempts
+- [x] Test with invalid credentials and SQL injection attempts
 - [ ] Verify rate limiting and account lockout mechanisms
 - [ ] Test session expiry and token validation
