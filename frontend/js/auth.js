@@ -145,10 +145,10 @@ class AuthHandler {
     redirectUser(role) {
         // Define dashboard routes based on role
         const dashboards = {
-            'customer': '/customer-dashboard.html',
-            'driver': '/driver-dashboard.html',
-            'manager': '/manager-dashboard.html',
-            'admin': '/admin-dashboard.html'
+            'customer': '../frontend/customer/customer-dashboard.html',
+            'driver': '../frontend/driver/driver-dashboard.html',
+            'manager': '../frontend/management/management-dashboard.html',
+            'admin': '../frontend/admin/admin-dashboard.html'
         };
 
         // Normalize role (handle different case formats)
