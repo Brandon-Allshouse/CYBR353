@@ -37,10 +37,9 @@ public class RateLimiter {
         // Reset counter if window expired, otherwise increment within current window
         if (secondsElapsed < 60) {
             if (info.requestCount >= maxRequests) {
-                AuditLogger.logSecurityEvent("RATE_LIMIT_EXCEEDED",
-                    String.format("Rate limit exceeded for %s on %s (%d requests)",
-                                identifier, action, info.requestCount),
-                    identifier);
+                // Log rate limit violation for security monitoring (IP not available in rate limiter context)
+                AuditLogger.logSecurityEvent(null, identifier, "RATE_LIMIT_EXCEEDED", null,
+                    String.format("Rate limit exceeded on %s (%d requests in window)", action, info.requestCount));
                 return Result.err(String.format("Rate limit exceeded. Max %d requests/minute.", maxRequests));
             }
             info.requestCount++;
@@ -59,8 +58,9 @@ public class RateLimiter {
 
         rateLimitMap.entrySet().removeIf(entry -> entry.getKey().startsWith(identifier + ":"));
 
-        AuditLogger.logSecurityEvent("RATE_LIMIT_CLEARED",
-            "Rate limit cleared for " + identifier, identifier);
+        // Log rate limit reset for audit trail
+        AuditLogger.logSecurityEvent(null, identifier, "RATE_LIMIT_CLEARED", null,
+            "Rate limit counters cleared");
 
         return Result.ok(null);
     }
@@ -75,9 +75,9 @@ public class RateLimiter {
         RateLimitInfo info = new RateLimitInfo(Integer.MAX_VALUE, Instant.now());
         rateLimitMap.put(key, info);
 
-        AuditLogger.logSecurityEvent("TEMPORARY_BAN",
-            String.format("Identifier %s banned for %d seconds", identifier, durationSeconds),
-            identifier);
+        // Log temporary ban event for security monitoring
+        AuditLogger.logSecurityEvent(null, identifier, "TEMPORARY_BAN", null,
+            String.format("Identifier banned for %d seconds", durationSeconds));
 
         new Thread(() -> {
             try {

@@ -2,7 +2,7 @@ DROP DATABASE IF EXISTS delivery_system;
 CREATE DATABASE delivery_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE delivery_system;
 
--- Users table with BLP security fields
+-- Users table with BLP security fields and login lockout tracking
 CREATE TABLE users (
     user_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -11,8 +11,11 @@ CREATE TABLE users (
     role ENUM('customer', 'driver', 'manager', 'admin') NOT NULL,
     clearance_level TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '0=Unclassified, 1=Confidential, 2=Secret, 3=Top Secret',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    failed_attempts INT DEFAULT 0 COMMENT 'Failed login attempts counter for account lockout',
+    lockout_until TIMESTAMP NULL COMMENT 'Account locked until this time (NULL if not locked)',
 
     INDEX idx_username (username),
+    INDEX idx_lockout (lockout_until),
     CONSTRAINT chk_clearance_level CHECK (clearance_level BETWEEN 0 AND 3)
 ) ENGINE=InnoDB;
 
@@ -40,7 +43,23 @@ CREATE TABLE audit_log (
     details TEXT NULL,
 
     INDEX idx_timestamp (timestamp),
-    INDEX idx_username (username)
+    INDEX idx_username (username),
+    INDEX idx_action (action),
+    INDEX idx_result (result)
+) ENGINE=InnoDB;
+
+-- MFA codes table for two-factor authentication
+CREATE TABLE mfa_codes (
+    code_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    code VARCHAR(6) NOT NULL,
+    expiry_time TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_user_expiry (user_id, expiry_time),
+    INDEX idx_code (code)
 ) ENGINE=InnoDB;
 
 -- Insert test users with different clearance levels
@@ -62,7 +81,7 @@ SELECT '============================================================' AS '';
 SELECT 'DATABASE CREATED SUCCESSFULLY' AS '';
 SELECT '============================================================' AS '';
 SELECT 'Database: delivery_system' AS '';
-SELECT 'Tables: users, security_labels, audit_log' AS '';
+SELECT 'Tables: users, security_labels, audit_log, mfa_codes' AS '';
 SELECT 'Test Users: customer1, driver1, manager1, admin' AS '';
 SELECT '' AS '';
 SELECT 'Test Credentials (ready for login testing):' AS '';
@@ -72,4 +91,10 @@ SELECT '  manager1 / mgr123 (Clearance: 2 - Secret)' AS '';
 SELECT '  admin / admin123 (Clearance: 3 - Top Secret)' AS '';
 SELECT '' AS '';
 SELECT 'Password Hash Method: SHA-256(password + salt)' AS '';
+SELECT '' AS '';
+SELECT 'Security Features Enabled:' AS '';
+SELECT '  - Login lockout after 3 failed attempts (30 min)' AS '';
+SELECT '  - Two-factor authentication (MFA) support' AS '';
+SELECT '  - Comprehensive audit logging with IP tracking' AS '';
+SELECT '  - Bell-LaPadula access control (clearance levels 0-3)' AS '';
 SELECT '============================================================' AS '';

@@ -32,6 +32,9 @@ public class Main {
 
         // Protected endpoint for session verification - demonstrates BLP clearance levels in response
         server.createContext("/whoami", (exchange) -> {
+            // Capture client IP for audit logging
+            String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
+
             // CORS headers required for browser-based clients (e.g., file:// protocol frontends)
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -61,7 +64,7 @@ public class Main {
 
             Result<SessionManager.Session, String> sessionResult = SessionManager.getSession(token);
             if (sessionResult.isErr()) {
-                AuditLogger.log("<unknown>", "WHOAMI", "UNAUTHORIZED", sessionResult.unwrapErr());
+                AuditLogger.log("<unknown>", "WHOAMI", "denied", clientIp, sessionResult.unwrapErr());
                 String resp = "{\"error\":\"unauthorized\"}";
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(401, resp.length());
@@ -72,7 +75,7 @@ public class Main {
 
             SessionManager.Session s = sessionResult.unwrap();
             String resp = String.format("{\"username\":\"%s\",\"role\":\"%s\",\"clearance\":\"%s\"}", s.username, s.role, s.clearance.name());
-            AuditLogger.log(s.username, "WHOAMI", "SUCCESS", "Session verified");
+            AuditLogger.log(s.username, "WHOAMI", "success", clientIp, "Session verified");
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, resp.length());
             exchange.getResponseBody().write(resp.getBytes());

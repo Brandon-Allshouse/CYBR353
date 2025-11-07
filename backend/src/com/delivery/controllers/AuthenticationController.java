@@ -3,6 +3,7 @@ package com.delivery.controllers;
 import com.delivery.database.DatabaseConnection;
 import com.delivery.models.User;
 import com.delivery.security.AuditLogger;
+import com.delivery.security.LoginLockout;
 import com.delivery.security.SecurityLevel;
 import com.delivery.session.SessionManager;
 import com.delivery.util.PasswordUtil;
@@ -55,6 +56,19 @@ public class AuthenticationController {
             return;
         }
 
+        // Check if account is locked due to too many failed login attempts
+        Result<LoginLockout.LockoutStatus, String> lockoutResult = LoginLockout.isAccountLocked(username, clientIp);
+        if (lockoutResult.isOk()) {
+            LoginLockout.LockoutStatus status = lockoutResult.unwrap();
+            if (status.isLocked) {
+                // Account is locked - log with actual user_id and deny access
+                AuditLogger.log(status.userId, username, "LOGIN", "denied", clientIp,
+                              "Login attempt while account is locked until " + status.lockoutUntil);
+                respondJson(exchange, 401, "{\"message\":\"account temporarily locked\"}");
+                return;
+            }
+        }
+
         // Get database connection using Result pattern
         Result<Connection, String> connResult = DatabaseConnection.getConnection();
         if (connResult.isErr()) {
@@ -94,6 +108,8 @@ public class AuthenticationController {
 
                     String computed = hashResult.unwrap();
                     if (!computed.equalsIgnoreCase(hash)) {
+                        // Increment failed attempt counter (will lock account after 3 failures)
+                        LoginLockout.recordFailedAttempt(username, clientIp);
                         AuditLogger.log(id, username, "LOGIN", "denied", clientIp, "Invalid password");
                         respondJson(exchange, 401, "{\"message\":\"invalid credentials\"}");
                         return;
@@ -110,6 +126,9 @@ public class AuthenticationController {
 
                     SecurityLevel clearance = clearanceResult.unwrap();
                     User user = new User((int)id, username, role, clearance);
+
+                    // Reset failed login attempt counter on successful authentication
+                    LoginLockout.resetFailedAttempts(id, username, clientIp);
 
                     // Session token stored in-memory - consider Redis for distributed deployments
                     String token = SessionManager.createSession(user.getUsername(), user.getRole(), user.getClearance());

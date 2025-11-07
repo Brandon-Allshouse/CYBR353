@@ -16,10 +16,10 @@ public class BLPAccessControl {
         boolean allowed = subjectClearance.ordinal() >= objectClassification.ordinal();
 
         if (!allowed) {
-            AuditLogger.logSecurityEvent("BLP_READ_DENIED",
-                String.format("Read denied: %s cannot read %s",
-                    subjectClearance.name(), objectClassification.name()),
-                "SYSTEM");
+            // Log access denial for security audit trail (IP not available for internal BLP checks)
+            AuditLogger.logSecurityEvent(null, "SYSTEM", "BLP_READ_DENIED", null,
+                String.format("Read denied: %s clearance cannot read %s data",
+                    subjectClearance.name(), objectClassification.name()));
         }
 
         return allowed;
@@ -34,10 +34,10 @@ public class BLPAccessControl {
         boolean allowed = subjectClearance.ordinal() <= objectClassification.ordinal();
 
         if (!allowed) {
-            AuditLogger.logSecurityEvent("BLP_WRITE_DENIED",
-                String.format("Write denied: %s cannot write to %s",
-                    subjectClearance.name(), objectClassification.name()),
-                "SYSTEM");
+            // Log access denial for security audit trail (IP not available for internal BLP checks)
+            AuditLogger.logSecurityEvent(null, "SYSTEM", "BLP_WRITE_DENIED", null,
+                String.format("Write denied: %s clearance cannot write to %s data",
+                    subjectClearance.name(), objectClassification.name()));
         }
 
         return allowed;

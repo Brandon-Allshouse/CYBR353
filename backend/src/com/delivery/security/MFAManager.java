@@ -42,8 +42,9 @@ public class MFAManager {
                 stmt.setTimestamp(3, expiryTime);
                 stmt.executeUpdate();
 
-                AuditLogger.log(userId, username, "MFA_CODE_GENERATED", "SUCCESS",
-                              "MFA code generated");
+                // Log MFA code generation for security audit (IP not available in MFA context)
+                AuditLogger.log(userId, username, "MFA_CODE_GENERATED", "success",
+                              "MFA code generated and stored");
 
                 // TODO: Replace console output with email/SMS delivery service
                 System.out.println("========================================");
@@ -55,7 +56,8 @@ public class MFAManager {
             }
 
         } catch (SQLException e) {
-            AuditLogger.logError("MFA_GENERATION_ERROR", e.getMessage(), username, null);
+            // Log MFA generation errors for troubleshooting
+            AuditLogger.logError("MFA_GENERATION_ERROR", e.getMessage(), username);
             return Result.err("Failed to generate MFA code: " + e.getMessage());
         }
     }
@@ -94,19 +96,22 @@ public class MFAManager {
                             updateStmt.executeUpdate();
                         }
 
-                        AuditLogger.log(userId, username, "MFA_VALIDATION", "SUCCESS",
-                                      "MFA code validated successfully");
+                        // Log successful MFA validation
+                        AuditLogger.log(userId, username, "MFA_VALIDATION", "success",
+                                      "MFA code validated and marked as used");
                         return Result.ok(true);
                     } else {
-                        AuditLogger.log(userId, username, "MFA_VALIDATION", "DENIED",
-                                      "Invalid or expired MFA code");
+                        // Log failed MFA validation attempt
+                        AuditLogger.log(userId, username, "MFA_VALIDATION", "denied",
+                                      "Invalid or expired MFA code provided");
                         return Result.ok(false);
                     }
                 }
             }
 
         } catch (SQLException e) {
-            AuditLogger.logError("MFA_VALIDATION_ERROR", e.getMessage(), username, null);
+            // Log MFA validation errors
+            AuditLogger.logError("MFA_VALIDATION_ERROR", e.getMessage(), username);
             return Result.err("Failed to validate MFA code: " + e.getMessage());
         }
     }
@@ -124,7 +129,8 @@ public class MFAManager {
                 int deleted = stmt.executeUpdate(sql);
 
                 if (deleted > 0) {
-                    AuditLogger.log("SYSTEM", "MFA_CLEANUP", "SUCCESS", 
+                    // Log MFA cleanup operations for audit trail
+                    AuditLogger.log("SYSTEM", "MFA_CLEANUP", "success", null,
                                   deleted + " expired MFA codes deleted");
                 }
 
