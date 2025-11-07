@@ -235,8 +235,14 @@ CREATE TABLE audit_log (
 - `MFA_CODE_GENERATED` / `MFA_VERIFIED` - Two-factor auth events
 - `LOCKOUT_CHECK` - Account status checks
 
-### MFA Codes Table (Planned)
-> **Note:** The `MFAManager.java` class is implemented but the database table needs to be added to `schema.sql`:
+### MFA Codes Table ✅
+**Status:** Fully implemented in `schema.sql`
+
+The `mfa_codes` table is now included in the schema and supports:
+- 6-digit time-limited codes
+- 5-minute expiration window
+- Single-use validation (prevents replay attacks)
+- Automatic cascade deletion when user is removed
 
 ```sql
 CREATE TABLE mfa_codes (
@@ -248,18 +254,30 @@ CREATE TABLE mfa_codes (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_user_expiry (user_id, expiry_time)
+    INDEX idx_user_expiry (user_id, expiry_time),
+    INDEX idx_code (code)
 ) ENGINE=InnoDB;
 ```
 
-### Login Lockout Fields (Planned)
-> **Note:** The `LoginLockout.java` class is implemented but these columns need to be added to the `users` table in `schema.sql`:
+### Login Lockout Fields ✅
+**Status:** Fully implemented in `schema.sql`
+
+The `users` table now includes lockout tracking columns:
+- `failed_attempts` - Counter for consecutive failed login attempts
+- `lockout_until` - Timestamp when account lockout expires
 
 ```sql
--- Add to users table:
-failed_attempts INT DEFAULT 0,
-lockout_until TIMESTAMP NULL
+-- Included in users table:
+failed_attempts INT DEFAULT 0 COMMENT 'Failed login attempts counter for account lockout',
+lockout_until TIMESTAMP NULL COMMENT 'Account locked until this time (NULL if not locked)',
+INDEX idx_lockout (lockout_until)
 ```
+
+**Lockout Behavior:**
+- Account locks after 3 failed attempts
+- Lockout duration: 30 minutes
+- Automatic unlock when lockout_until expires
+- Counter resets to 0 on successful login
 
 ## API Endpoints
 
@@ -933,7 +951,7 @@ sudo netstat -tlnp | grep 3306
 - [x] Create `security_labels` table for BLP object classification
 - [x] Create `audit_log` table for tracking access attempts
 - [x] Add `failed_attempts` and `lockout_until` columns to `users` table
-- [ ] Create `mfa_codes` table for two-factor authentication
+- [x] Create `mfa_codes` table for two-factor authentication
 
 ### Backend - Security Layer
 - [x] Create `SecurityLevel.java` enum (UNCLASSIFIED, CONFIDENTIAL, SECRET, TOP_SECRET)
@@ -976,7 +994,75 @@ sudo netstat -tlnp | grep 3306
 - [x] Connect frontend to backend `/login` endpoint
 - [x] Implement comprehensive audit logging
 - [x] Test login with users at different clearance levels
-- [ ] Verify BLP access control prevents unauthorized access on dashboards
+- [ ] Verify BLP access control prevents unauthorized access on dashboards *(dashboards in development)*
 - [x] Test with invalid credentials and SQL injection attempts
-- [ ] Verify rate limiting and account lockout mechanisms
-- [ ] Test session expiry and token validation
+- [x] Verify rate limiting and account lockout mechanisms
+- [x] Integrate LoginLockout into authentication flow
+- [x] Test account lockout after 3 failed attempts
+- [x] Verify lockout duration (30 minutes)
+- [x] Test session expiry and token validation
+- [x] Verify audit logging captures user_id and IP address for all events
+
+---
+
+## Project Status
+
+### ✅ Fully Implemented & Tested
+
+**Authentication & Security:**
+- SHA-256 password hashing with unique salt per user
+- Session management with automatic expiry (1 hour default)
+- Bell-LaPadula access control implementation (4 clearance levels)
+- Result<T,E> pattern for type-safe error handling
+- Login endpoint with credential validation
+
+**Account Protection:**
+- Account lockout after 3 failed login attempts (30-minute duration)
+- Failed attempt counter tracking in database
+- Automatic lockout expiration
+- LoginLockout fully integrated into authentication flow
+
+**Audit Logging:**
+- Comprehensive audit trail for all security events
+- User ID and IP address tracking for every action
+- Standardized lowercase enum values (success/denied/error)
+- Login attempts, lockout events, BLP violations all logged
+- Database-backed persistent audit log
+
+**Database:**
+- Complete schema with users, audit_log, security_labels, mfa_codes tables
+- Lockout columns (failed_attempts, lockout_until) operational
+- Indexes optimized for query performance
+- Foreign key constraints and data integrity
+
+**Input Security:**
+- SQL injection prevention via prepared statements
+- XSS protection through HTML encoding and sanitization
+- Input validation for emails, phones, usernames, tracking IDs
+- Password strength validation (8+ chars, uppercase, lowercase, digit, special)
+
+**Rate Limiting:**
+- Token bucket algorithm with 60-second windows
+- Login endpoint: 5 requests/minute
+- General endpoints: 60 requests/minute
+- Temporary ban capability
+
+**MFA Support:**
+- MFA code generation (6-digit, 5-minute expiry)
+- Single-use code validation (prevents replay attacks)
+- Database table with automatic cleanup
+- Framework ready for email/SMS integration
+
+### 🚧 In Development
+
+**Frontend Dashboards:**
+- Customer dashboard (UI in development)
+- Driver dashboard (UI in development)
+- Manager dashboard (UI in development)
+- Admin dashboard (UI in development)
+- BLP-enforced data access controls for dashboards
+
+**Testing:**
+- Comprehensive end-to-end testing of dashboard BLP enforcement
+- Load testing for concurrent user sessions
+- Security penetration testing
