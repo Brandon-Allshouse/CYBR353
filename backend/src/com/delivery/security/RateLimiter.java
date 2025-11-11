@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RateLimiter {
 
-    private static final int MAX_REQUESTS_PER_MINUTE = 60;
+    private static final int MAX_REQUESTS_PER_MINUTE = 2;
     private static final int LOGIN_MAX_REQUESTS = 5;
     private static final Map<String, RateLimitInfo> rateLimitMap = new ConcurrentHashMap<>();
 
@@ -127,3 +127,7 @@ public class RateLimiter {
         }
     }
 }
+
+
+
+//fix

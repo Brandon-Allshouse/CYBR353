@@ -6,33 +6,49 @@ class AuthHandler {
         this.passwordInput = document.getElementById('password');
         this.loginBtn = document.getElementById('loginBtn');
         this.errorDisplay = document.getElementById('errorDisplay');
-        
+
+        if (!this.form) {
+            console.error('Login form not found');
+            return;
+        }
+
         this.init();
     }
 
     init() {
         this.form.addEventListener('submit', (e) => this.handleSubmit(e));
-        
-        // Clear errors on input
-        this.usernameInput.addEventListener('input', () => this.clearFieldError('username'));
-        this.passwordInput.addEventListener('input', () => this.clearFieldError('password'));
+
+        if (this.usernameInput) {
+            this.usernameInput.addEventListener('input', () => this.clearFieldError('username'));
+        }
+        if (this.passwordInput) {
+            this.passwordInput.addEventListener('input', () => this.clearFieldError('password'));
+        }
     }
 
     async handleSubmit(e) {
         e.preventDefault();
-        
+
         // Clear previous errors
         this.clearAllErrors();
-        
+
         // Validate form
         if (!this.validateForm()) {
+            return;
+        }
+
+        // Verify reCAPTCHA
+        const recaptchaResponse = grecaptcha.getResponse();
+        if (!recaptchaResponse) {
+            this.showFieldError('recaptcha', 'Please complete the reCAPTCHA verification');
             return;
         }
 
         // Get form data
         const credentials = {
             username: this.usernameInput.value.trim(),
-            password: this.passwordInput.value
+            password: this.passwordInput.value,
+            recaptchaToken: recaptchaResponse
         };
 
         // Show loading state
@@ -59,10 +75,12 @@ class AuthHandler {
             } else {
                 // Show error message
                 this.showError(data.message || 'Invalid username or password');
+                grecaptcha.reset();
             }
         } catch (error) {
             console.error('Login error:', error);
             this.showError('Unable to connect to server. Please try again.');
+            grecaptcha.reset();
         } finally {
             this.setLoading(false);
         }
@@ -97,24 +115,27 @@ class AuthHandler {
     showFieldError(field, message) {
         const input = document.getElementById(field);
         const errorElement = document.getElementById(`${field}Error`);
-        
-        input.classList.add('error');
-        errorElement.textContent = message;
-        errorElement.classList.add('show');
+
+        if (input) input.classList.add('error');
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+        }
     }
 
     clearFieldError(field) {
         const input = document.getElementById(field);
         const errorElement = document.getElementById(`${field}Error`);
-        
-        input.classList.remove('error');
-        errorElement.classList.remove('show');
+
+        if (input) input.classList.remove('error');
+        if (errorElement) errorElement.classList.remove('show');
     }
 
     clearAllErrors() {
         this.errorDisplay.classList.remove('show');
         this.clearFieldError('username');
         this.clearFieldError('password');
+        this.clearFieldError('recaptcha');
     }
 
     showError(message) {
@@ -143,23 +164,23 @@ class AuthHandler {
     }
 
     redirectUser(role) {
-        // Define dashboard routes based on role
         const dashboards = {
-            'customer': '../frontend/customer/customer-dashboard.html',
-            'driver': '../frontend/driver/driver-dashboard.html',
-            'manager': '../frontend/management/management-dashboard.html',
-            'admin': '../frontend/admin/admin-dashboard.html'
+            'customer': '/customer/dashboard',
+            'driver': '/driver/dashboard',
+            'manager': '/management/dashboard',
+            'admin': '/admin/dashboard'
         };
 
-        // Normalize role (handle different case formats)
         const normalizedRole = role.toLowerCase();
-        
-        // Get appropriate dashboard or default to customer
-        const dashboardUrl = dashboards[normalizedRole] || dashboards['customer'];
-        
-        // Redirect with slight delay for UX
+        const dashboardRoute = dashboards[normalizedRole] || dashboards['customer'];
+
         setTimeout(() => {
-            window.location.href = dashboardUrl;
+            if (window.appRouter) {
+                window.appRouter.navigate(dashboardRoute);
+            } else {
+                console.error('Router not available, falling back to direct navigation');
+                window.location.href = dashboardRoute;
+            }
         }, 500);
     }
 }

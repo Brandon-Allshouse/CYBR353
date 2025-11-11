@@ -4,6 +4,7 @@ import com.delivery.database.DatabaseConnection;
 import com.delivery.models.User;
 import com.delivery.security.AuditLogger;
 import com.delivery.security.LoginLockout;
+import com.delivery.security.RecaptchaVerifier;
 import com.delivery.security.SecurityLevel;
 import com.delivery.session.SessionManager;
 import com.delivery.util.PasswordUtil;
@@ -49,10 +50,19 @@ public class AuthenticationController {
         Map<String, String> parsed = parseJson(body);
         String username = parsed.get("username");
         String password = parsed.get("password");
+        String recaptchaToken = parsed.get("recaptchaToken");
 
         if (username == null || password == null) {
             AuditLogger.log(null, username == null ? "<unknown>" : username, "LOGIN", "error", clientIp, "Missing credentials");
             respondJson(exchange, 400, "{\"message\":\"username and password required\"}");
+            return;
+        }
+
+        // Verify reCAPTCHA (bot protection)
+        Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
+        if (recaptchaResult.isErr()) {
+            AuditLogger.log(null, username, "LOGIN", "denied", clientIp, "reCAPTCHA verification failed");
+            respondJson(exchange, 400, "{\"message\":\"" + recaptchaResult.unwrapErr() + "\"}");
             return;
         }
 

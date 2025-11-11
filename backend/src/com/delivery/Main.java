@@ -1,6 +1,7 @@
 package com.delivery;
 
 import com.delivery.controllers.AuthenticationController;
+import com.delivery.controllers.CustomerController;
 import com.delivery.util.EnvLoader;
 import com.delivery.util.Result;
 import com.delivery.security.AuditLogger;
@@ -28,6 +29,11 @@ public class Main {
 
         server.createContext("/login", (exchange) -> {
             AuthenticationController.handleLogin(exchange);
+        });
+
+        // Customer registration endpoint - Use Case 1: Create new customer account
+        server.createContext("/customer/register", (exchange) -> {
+            CustomerController.handleRegistration(exchange);
         });
 
         // Protected endpoint for session verification - demonstrates BLP clearance levels in response
@@ -92,8 +98,9 @@ public class Main {
         System.out.println("Server listening on: http://localhost:" + port);
         System.out.println("");
         System.out.println("Available endpoints:");
-        System.out.println("  POST /login  - User authentication");
-        System.out.println("  GET  /whoami - Check session status");
+        System.out.println("  POST /login                 - User authentication");
+        System.out.println("  POST /customer/register     - Customer registration");
+        System.out.println("  GET  /whoami                - Check session status");
         System.out.println("");
         System.out.println("Test credentials:");
         System.out.println("  customer1 / cust123   (Clearance: 0)");
