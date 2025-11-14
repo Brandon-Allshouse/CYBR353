@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracking & Status - Delivery System</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">Delivery Management</h1>
+            <ul class="nav-menu">
+                <li><a href="OrderManagement.html" class="nav-link">Order Management</a></li>
+                <li><a href="TrackingStatus.html" class="nav-link active">Tracking & Status</a></li>
+                <li><a href="Inventory.html" class="nav-link">Inventory & Transfer</a></li>
+                <li><a href="Routing.html" class="nav-link">Routing</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2>Package Tracking & Status</h2>
+        
+        <div class="section">
+            <h3>Track Package</h3>
+            <form id="trackingForm" class="form">
+                <div class="form-group">
+                    <label for="trackingId">Tracking ID:</label>
+                    <input type="text" id="trackingId" placeholder="Enter tracking ID" required>
+                </div>
+                <button type="submit" class="btn">Track Package</button>
+            </form>
+            
+            <div id="trackingResult" class="tracking-result" style="display: none;">
+                <h4>Tracking Information</h4>
+                <div class="tracking-info">
+                    <p><strong>Tracking ID:</strong> <span id="resultTrackingId"></span></p>
+                    <p><strong>Customer:</strong> <span id="resultCustomer"></span></p>
+                    <p><strong>Status:</strong> <span id="resultStatus" class="status-badge"></span></p>
+                    <p><strong>Current Location:</strong> <span id="resultLocation"></span></p>
+                    <p><strong>Estimated Delivery:</strong> <span id="resultEstimate"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>All Packages Status</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tracking ID</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Location</th>
+                            <th>Est. Delivery</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statusTable">
+                        <tr>
+                            <td colspan="6" class="no-data">No packages to track yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Update Package Status (Driver/Manager)</h3>
+            <form id="updateStatusForm" class="form">
+                <div class="form-group">
+                    <label for="updateTrackingId">Tracking ID:</label>
+                    <input type="text" id="updateTrackingId" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newStatus">New Status:</label>
+                    <select id="newStatus" required>
+                        <option value="">Select status...</option>
+                        <option value="Order Placed">Order Placed</option>
+                        <option value="Processing">Processing</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Delivered">Delivered</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newLocation">Current Location:</label>
+                    <input type="text" id="newLocation" required>
+                </div>
+                
+                <button type="submit" class="btn">Update Status</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="tracking.js"></script>
+</body>
+</html>

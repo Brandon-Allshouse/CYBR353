@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Routing - Delivery System</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">Delivery Management</h1>
+            <ul class="nav-menu">
+                <li><a href="OrderManagement.html" class="nav-link">Order Management</a></li>
+                <li><a href="TrackingStatus.html" class="nav-link">Tracking & Status</a></li>
+                <li><a href="Inventory.html" class="nav-link">Inventory & Transfer</a></li>
+                <li><a href="Routing.html" class="nav-link active">Routing</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2>Route Management</h2>
+        
+        <div class="section">
+            <h3>Available Drivers</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Driver ID</th>
+                            <th>Driver Name</th>
+                            <th>Status</th>
+                            <th>Vehicle</th>
+                            <th>Assigned Packages</th>
+                        </tr>
+                    </thead>
+                    <tbody id="driversTable">
+                        <tr>
+                            <td>DRV-001</td>
+                            <td>John Smith</td>
+                            <td><span class="status-badge status-available">Available</span></td>
+                            <td>VAN-123</td>
+                            <td>0</td>
+                        </tr>
+                        <tr>
+                            <td>DRV-002</td>
+                            <td>Sarah Johnson</td>
+                            <td><span class="status-badge status-available">Available</span></td>
+                            <td>VAN-456</td>
+                            <td>0</td>
+                        </tr>
+                        <tr>
+                            <td>DRV-003</td>
+                            <td>Mike Wilson</td>
+                            <td><span class="status-badge status-available">Available</span></td>
+                            <td>TRUCK-789</td>
+                            <td>0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Assign Route to Driver</h3>
+            <form id="routeForm" class="form">
+                <div class="form-group">
+                    <label for="selectDriver">Select Driver:</label>
+                    <select id="selectDriver" required>
+                        <option value="">Select driver...</option>
+                        <option value="DRV-001">John Smith (DRV-001)</option>
+                        <option value="DRV-002">Sarah Johnson (DRV-002)</option>
+                        <option value="DRV-003">Mike Wilson (DRV-003)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="routeDate">Route Date:</label>
+                    <input type="date" id="routeDate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="packageIds">Package Tracking IDs (comma-separated):</label>
+                    <input type="text" id="packageIds" placeholder="TRK-001, TRK-002, TRK-003" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="estimatedTime">Estimated Time (hours):</label>
+                    <input type="number" id="estimatedTime" min="1" max="12" required>
+                </div>
+                
+                <button type="submit" class="btn">Assign Route</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h3>Active Routes</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Route ID</th>
+                            <th>Driver</th>
+                            <th>Date</th>
+                            <th>Packages</th>
+                            <th>Est. Time</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routesTable">
+                        <tr>
+                            <td colspan="7" class="no-data">No routes assigned yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Packages Ready for Delivery</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tracking ID</th>
+                            <th>Destination</th>
+                            <th>Priority</th>
+                            <th>Assigned</th>
+                        </tr>
+                    </thead>
+                    <tbody id="readyPackagesTable">
+                        <tr>
+                            <td colspan="4" class="no-data">No packages ready for delivery.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="routing.js"></script>
+</body>
+</html>

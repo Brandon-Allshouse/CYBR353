@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory & Transfer - Delivery System</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">Delivery Management</h1>
+            <ul class="nav-menu">
+                <li><a href="OrderManagement.html" class="nav-link">Order Management</a></li>
+                <li><a href="TrackingStatus.html" class="nav-link">Tracking & Status</a></li>
+                <li><a href="Inventory.html" class="nav-link active">Inventory & Transfer</a></li>
+                <li><a href="Routing.html" class="nav-link">Routing</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2>Inventory & Transfer Management</h2>
+        
+        <div class="section">
+            <h3>Facility Inventory</h3>
+            <div class="form-group">
+                <label for="facilitySelect">Select Facility:</label>
+                <select id="facilitySelect">
+                    <option value="FAC-001">Main Facility (FAC-001)</option>
+                    <option value="FAC-002">North Facility (FAC-002)</option>
+                    <option value="FAC-003">South Facility (FAC-003)</option>
+                    <option value="FAC-004">East Facility (FAC-004)</option>
+                </select>
+                <button onclick="viewInventory()" class="btn">View Inventory</button>
+            </div>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tracking ID</th>
+                            <th>Package Details</th>
+                            <th>Destination</th>
+                            <th>Arrival Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTable">
+                        <tr>
+                            <td colspan="5" class="no-data">Select a facility to view inventory.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Transfer Packages Between Facilities</h3>
+            <form id="transferForm" class="form">
+                <div class="form-group">
+                    <label for="transferTrackingId">Tracking ID:</label>
+                    <input type="text" id="transferTrackingId" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="sourceFacility">Source Facility:</label>
+                    <select id="sourceFacility" required>
+                        <option value="">Select source...</option>
+                        <option value="FAC-001">Main Facility (FAC-001)</option>
+                        <option value="FAC-002">North Facility (FAC-002)</option>
+                        <option value="FAC-003">South Facility (FAC-003)</option>
+                        <option value="FAC-004">East Facility (FAC-004)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="destFacility">Destination Facility:</label>
+                    <select id="destFacility" required>
+                        <option value="">Select destination...</option>
+                        <option value="FAC-001">Main Facility (FAC-001)</option>
+                        <option value="FAC-002">North Facility (FAC-002)</option>
+                        <option value="FAC-003">South Facility (FAC-003)</option>
+                        <option value="FAC-004">East Facility (FAC-004)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transportMethod">Transport Method:</label>
+                    <select id="transportMethod" required>
+                        <option value="">Select method...</option>
+                        <option value="Ground">Ground</option>
+                        <option value="Air">Air</option>
+                        <option value="Express">Express</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn">Initiate Transfer</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h3>Active Transfers</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Transfer ID</th>
+                            <th>Tracking ID</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transfersTable">
+                        <tr>
+                            <td colspan="6" class="no-data">No active transfers.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="inventory.js"></script>
+</body>
+</html>

@@ -8,8 +8,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseConnection {
-    // Singleton connection - reused across requests for efficiency
-    // WARNING: Not thread-safe for concurrent writes, consider connection pooling for production
     private static Connection conn = null;
 
     public static Result<Connection, String> getConnection() {
@@ -33,7 +31,6 @@ public class DatabaseConnection {
         if (userResult.isErr()) return Result.err("DB_USER not configured");
         if (passwordResult.isErr()) return Result.err("DB_PASSWORD not configured");
 
-        // useSSL=false for local dev - MUST enable SSL/TLS in production
         String url = "jdbc:mysql://" + hostResult.unwrap() + ":" + portResult.unwrap() + "/" +
                      nameResult.unwrap() + "?serverTimezone=UTC&useSSL=false";
 

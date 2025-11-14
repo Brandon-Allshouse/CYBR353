@@ -19,9 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SecurityManager {
-
-    // Small Result type to represent either an OK value or an error value.
-    // Used across this simplified security manager to avoid external dependencies.
     // T: success value type
     // E: error value type
     public static class Result<T, E> {
@@ -51,8 +48,7 @@ public class SecurityManager {
         public List<String> getErrors() { return errors; }
     }
 
-    // Security levels used by the Bell-LaPadula (BLP) checks.
-    // Higher ordinal means greater clearance.
+    // Security levels used by BLP checks.
     public enum SecurityLevel {
         UNCLASSIFIED(0), CONFIDENTIAL(1), SECRET(2), TOP_SECRET(3);
         private final int level;
@@ -60,13 +56,10 @@ public class SecurityManager {
         public int getLevel() { return level; }
     }
 
-    // Very small audit logger that stores entries in-memory and prints to console.
-    // Intended for local testing and to provide an audit trail without a DB.
     public static class AuditLogger {
         private static final List<String> logs = new ArrayList<>();
 
-    // Log a generic audit entry.
-    // userId may be null, ipAddress/details are optional.
+    // Log a audit entry.
     public static synchronized Result<Void, String> log(Long userId, String username,
                                 String action, String result,
                                 String ipAddress, String details) {
@@ -82,8 +75,7 @@ public class SecurityManager {
             return Result.ok(null);
         }
 
-    // Convenience method to log security-related events. Chooses a result
-    // string automatically based on the eventType (denied/error/success).
+    // string automatically based on the eventType
     public static Result<Void, String> logSecurityEvent(Long userId, String username, String eventType,
                                 String ipAddress, String description) {
             String result;
@@ -98,7 +90,7 @@ public class SecurityManager {
             return log(userId, username == null ? "SYSTEM" : username, eventType == null ? "EVENT" : eventType, result, ipAddress, description);
         }
 
-    // Log an error event with an errorType and optional message.
+    // Log an error event with an errorType
     public static Result<Void, String> logError(String errorType, String errorMessage, String username) {
             return log(null, username == null ? "SYSTEM" : username, errorType == null ? "ERROR" : errorType, "error", null,
                     errorMessage == null ? "" : errorMessage);
@@ -109,8 +101,7 @@ public class SecurityManager {
     }
 
     // Simple account lockout mechanism to prevent brute-force attempts.
-    // Tracks failed attempts per username and sets a lockout expiry when
-    // the threshold is reached.
+    // Tracks failed attempts per username and sets a lockout expiry when the threshold is reached.
     public static class LoginLockout {
         private static final int MAX_LOGIN_ATTEMPTS = 3;
         private static final int LOCKOUT_MINUTES = 30;
@@ -118,8 +109,7 @@ public class SecurityManager {
         private static class Info { AtomicInteger attempts = new AtomicInteger(0); Instant lockoutUntil = null; }
         private static final Map<String, Info> store = new ConcurrentHashMap<>();
 
-    // Record a failed login attempt. Returns the current number of failed
-    // attempts for the username, or 0 if the account is already locked.
+    // Record a failed login attempt. Returns the current number of failed attempts for the username, or 0 if the account is already locked.
     public static Result<Integer, String> recordFailedAttempt(String username, String ipAddress) {
             if (username == null || username.trim().isEmpty()) return Result.err("Username required");
             Info info = store.computeIfAbsent(username, k -> new Info());
@@ -152,7 +142,7 @@ public class SecurityManager {
         }
     }
 
-    // Implements lightweight Bell-LaPadula access checks: no read up, no write down.
+    // Implements BLP access checks.
     public static class BLPAccessControl {
         public static boolean checkReadAccess(SecurityLevel subjectClearance, SecurityLevel objectClassification) {
             boolean allowed = subjectClearance.ordinal() >= objectClassification.ordinal();
@@ -199,8 +189,7 @@ public class SecurityManager {
         }
     }
 
-    // Higher-level validation routines that use the sanitizer and password rules
-    // to validate business inputs such as registrations.
+    // Higher level validation routines that use the sanitizer and password rules
     public static class InputValidator {
         public static ValidationResult validateRegistration(String name, String email, String phone, String password) {
             ValidationResult vr = new ValidationResult();
@@ -213,8 +202,7 @@ public class SecurityManager {
         }
     }
 
-    // Minimal in-memory MFA manager. Generates numeric codes, stores them with
-    // an expiry time, and marks them used after successful validation.
+    // In memory MFA manager
     public static class MFAManager {
         private static final int EXPIRY_MINUTES = 5;
         private static final SecureRandom rnd = new SecureRandom();
@@ -223,7 +211,6 @@ public class SecurityManager {
         private static final Map<Long, MFAInfo> codes = new ConcurrentHashMap<>();
 
     // Generate and store a one-time MFA code for the given userId.
-    // Returns the code (for test/demo) and logs the generation event.
     public static Result<String, String> generateMFACode(Long userId, String username) {
             if (userId == null || username == null) return Result.err("UserId and username required");
             int code = 100000 + rnd.nextInt(900000);
@@ -261,7 +248,6 @@ public class SecurityManager {
         }
 
     // Hash a password with the provided salt using SHA-256.
-    // Returns hex-encoded hash or an error if algorithm not available.
     public static Result<String, String> hashPassword(String password, String salt) {
             if (password == null || salt == null) return Result.err("Password and salt required");
             try {
@@ -291,8 +277,7 @@ public class SecurityManager {
         }
     }
 
-    // Simple per-identifier rate limiter with a 60-second sliding window.
-    // Counters are kept in-memory and reset per window.
+    // Simple per identifier rate limiter to prevent brute force attacks
     public static class RateLimiter {
         private static final Map<String, AtomicInteger> counters = new ConcurrentHashMap<>();
         private static final Map<String, Instant> windows = new ConcurrentHashMap<>();
@@ -319,12 +304,10 @@ public class SecurityManager {
     }
 
     // Server-side reCAPTCHA verifier. Sends a POST to Google's verify endpoint
-    // using the `RECAPTCHA_SECRET_KEY` environment variable.
     public static class RecaptchaVerifier {
         private static final String VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 
-    // Verify the provided reCAPTCHA token with Google's API. Returns true
-    // on success or an error string describing why verification failed.
+    // Verify the provided reCAPTCHA token with Google's API.
     public static Result<Boolean, String> verifyRecaptcha(String token, String clientIp) {
             if (token == null || token.trim().isEmpty()) return Result.err("reCAPTCHA token required");
 

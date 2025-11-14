@@ -6,28 +6,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-/**
- * Centralized audit logging for security events and access attempts
- * All entries written to audit_log table with timestamp, user, action, result, IP, and details
- *
- * STANDARDIZED LOGGING INTERFACE:
- * - All result values MUST be lowercase: "success", "denied", "error"
- * - IP address should be included whenever possible (can be null for internal operations)
- * - Uses Result<T,E> pattern for consistent error handling
- */
 public class AuditLogger {
 
-    /**
-     * PRIMARY AUDIT LOGGING METHOD - All other methods should call this
-     *
-     * @param userId User ID performing the action (null if not authenticated or system action)
-     * @param username Username performing the action (required)
-     * @param action Action being performed (e.g., "LOGIN", "LOGOUT", "BLP_READ_DENIED")
-     * @param result Result of the action - MUST be lowercase: "success", "denied", or "error"
-     * @param ipAddress Client IP address (null if not applicable or internal operation)
-     * @param details Additional details about the action
-     * @return Result indicating success or failure of logging operation
-     */
     public static synchronized Result<Void, String> log(Long userId, String username, String action,
                                                          String result, String ipAddress, String details) {
         if (username == null || action == null || result == null) {
@@ -39,7 +19,7 @@ public class AuditLogger {
             System.err.println("WARNING: Invalid audit result value '" + result + "' - must be lowercase: success, denied, or error");
             // Auto-fix common mistakes by converting to lowercase
             result = result.toLowerCase();
-            // If still invalid, default to "error"
+            // If still invalid, default to error
             if (!result.equals("success") && !result.equals("denied") && !result.equals("error")) {
                 result = "error";
             }
@@ -82,19 +62,11 @@ public class AuditLogger {
         }
     }
 
-    /**
-     * Convenience overload for logging without IP address
-     * Use this for internal operations where IP is not applicable
-     */
     public static Result<Void, String> log(Long userId, String username, String action,
                                           String result, String details) {
         return log(userId, username, action, result, null, details);
     }
 
-    /**
-     * Convenience overload for logging without user ID
-     * Use this when logging failed authentication attempts where user ID is not yet known
-     */
     public static Result<Void, String> log(String username, String action, String result,
                                           String ipAddress, String details) {
         return log(null, username, action, result, ipAddress, details);
