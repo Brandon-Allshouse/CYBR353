@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Management - Delivery System</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">Delivery Management</h1>
+            <ul class="nav-menu">
+                <li><a href="OrderManagement.html" class="nav-link active">Order Management</a></li>
+                <li><a href="TrackingStatus.html" class="nav-link">Tracking & Status</a></li>
+                <li><a href="Inventory.html" class="nav-link">Inventory & Transfer</a></li>
+                <li><a href="Routing.html" class="nav-link">Routing</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2>Order Management</h2>
+        
+        <div class="section">
+            <h3>Create New Order</h3>
+            <form id="orderForm" class="form">
+                <div class="form-group">
+                    <label for="customerName">Customer Name:</label>
+                    <input type="text" id="customerName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="customerEmail">Customer Email:</label>
+                    <input type="email" id="customerEmail" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="pickupAddress">Pickup Address:</label>
+                    <input type="text" id="pickupAddress" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="deliveryAddress">Delivery Address:</label>
+                    <input type="text" id="deliveryAddress" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="packageDetails">Package Details:</label>
+                    <textarea id="packageDetails" rows="3" required></textarea>
+                </div>
+                
+                <button type="submit" class="btn">Create Order</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h3>Active Orders</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Pickup</th>
+                            <th>Delivery</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable">
+                        <tr>
+                            <td colspan="6" class="no-data">No orders yet. Create an order above.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="order-management.js"></script>
+</body>
+</html>
