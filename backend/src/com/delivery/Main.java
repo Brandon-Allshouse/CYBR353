@@ -1,5 +1,6 @@
 package com.delivery;
 
+import com.delivery.controllers.AdminController;
 import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
 import com.delivery.util.EnvLoader;
@@ -88,6 +89,25 @@ public class Main {
             exchange.getResponseBody().close();
         });
 
+        // Admin endpoints - require TOP_SECRET clearance (admin role)
+        server.createContext("/admin/logs", AdminController::handleGetLogs);
+        server.createContext("/admin/users", (exchange) -> {
+            String path = exchange.getRequestURI().getPath();
+            String method = exchange.getRequestMethod();
+
+            if (path.equals("/admin/users") && "GET".equalsIgnoreCase(method)) {
+                AdminController.handleGetUsers(exchange);
+            } else if (path.equals("/admin/users") && "OPTIONS".equalsIgnoreCase(method)) {
+                AdminController.handleGetUsers(exchange);
+            } else if (path.matches("/admin/users/\\d+/role")) {
+                AdminController.handleUpdateUserRole(exchange);
+            } else if (path.matches("/admin/users/\\d+/status")) {
+                AdminController.handleUpdateUserStatus(exchange);
+            } else {
+                exchange.sendResponseHeaders(404, -1);
+            }
+        });
+
         // Thread pool sized for moderate concurrent load - adjust based on production needs
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
@@ -98,9 +118,13 @@ public class Main {
         System.out.println("Server listening on: http://localhost:" + port);
         System.out.println("");
         System.out.println("Available endpoints:");
-        System.out.println("  POST /login                 - User authentication");
-        System.out.println("  POST /customer/register     - Customer registration");
-        System.out.println("  GET  /whoami                - Check session status");
+        System.out.println("  POST /login                      - User authentication");
+        System.out.println("  POST /customer/register          - Customer registration");
+        System.out.println("  GET  /whoami                     - Check session status");
+        System.out.println("  GET  /admin/logs                 - View audit logs (Admin only)");
+        System.out.println("  GET  /admin/users                - List all users (Admin only)");
+        System.out.println("  PUT  /admin/users/:id/role       - Update user role (Admin only)");
+        System.out.println("  PUT  /admin/users/:id/status     - Update account status (Admin only)");
         System.out.println("");
         System.out.println("Test credentials:");
         System.out.println("  customer1 / cust123   (Clearance: 0)");

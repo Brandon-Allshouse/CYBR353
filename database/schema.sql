@@ -13,6 +13,7 @@ CREATE TABLE users (
     full_name VARCHAR(100) NULL COMMENT 'Full name (customers)',
     role ENUM('customer', 'driver', 'manager', 'admin') NOT NULL,
     clearance_level TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '0=Unclassified, 1=Confidential, 2=Secret, 3=Top Secret',
+    account_status ENUM('active', 'suspended', 'revoked') NOT NULL DEFAULT 'active' COMMENT 'Account status for admin management',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     failed_attempts INT DEFAULT 0 COMMENT 'Failed login attempts counter for account lockout',
     lockout_until TIMESTAMP NULL COMMENT 'Account locked until this time (NULL if not locked)',
@@ -20,6 +21,7 @@ CREATE TABLE users (
     INDEX idx_username (username),
     INDEX idx_email (email),
     INDEX idx_lockout (lockout_until),
+    INDEX idx_account_status (account_status),
     CONSTRAINT chk_clearance_level CHECK (clearance_level BETWEEN 0 AND 3)
 ) ENGINE=InnoDB;
 

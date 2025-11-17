@@ -104,7 +104,7 @@ class Router {
         try {
             const absolutePath = this.basePath + file;
 
-            const response = await fetch(absolutePath);
+            const response = await fetch(absolutePath, { cache: 'no-store' });
             if (!response.ok) {
                 throw new Error(`Failed to load ${file}`);
             }
@@ -116,10 +116,31 @@ class Router {
             const doc = parser.parseFromString(html, 'text/html');
             const content = doc.body.innerHTML;
 
+            // Get stylesheets from new page
+            const stylesheets = Array.from(doc.querySelectorAll('link[rel="stylesheet"]'))
+                .map(link => link.href);
+
             // Get scripts from new page (exclude router.js since it's already loaded)
             const scripts = Array.from(doc.querySelectorAll('script'))
                 .map(s => ({ src: s.src, content: s.textContent }))
                 .filter(s => !(s.src && s.src.includes('router.js')));
+
+            // Remove old page-specific stylesheets (keep global styles.css)
+            Array.from(document.querySelectorAll('link[rel="stylesheet"]')).forEach(link => {
+                if (!link.href.includes('styles.css')) {
+                    link.remove();
+                }
+            });
+
+            // Add new stylesheets
+            stylesheets.forEach(href => {
+                if (!document.querySelector(`link[href="${href}"]`)) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = href;
+                    document.head.appendChild(link);
+                }
+            });
 
             // Update the main content area
             document.body.innerHTML = content;

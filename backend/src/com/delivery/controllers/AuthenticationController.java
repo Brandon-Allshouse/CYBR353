@@ -91,8 +91,8 @@ public class AuthenticationController {
         Connection c = connResult.unwrap();
 
         try {
-            // Retrieve all authentication data including BLP clearance_level (0-3)
-            String sql = "SELECT user_id, password_hash, salt, role, clearance_level FROM users WHERE username = ?";
+            // Retrieve all authentication data including BLP clearance_level (0-3) and account_status
+            String sql = "SELECT user_id, password_hash, salt, role, clearance_level, account_status FROM users WHERE username = ?";
             try (PreparedStatement ps = c.prepareStatement(sql)) {
                 ps.setString(1, username);
                 try (ResultSet rs = ps.executeQuery()) {
@@ -106,6 +106,15 @@ public class AuthenticationController {
                     String salt = rs.getString("salt");
                     String role = rs.getString("role");
                     int clearanceLevel = rs.getInt("clearance_level");
+                    String accountStatus = rs.getString("account_status");
+
+                    // Check if account is suspended or revoked
+                    if ("suspended".equals(accountStatus) || "revoked".equals(accountStatus)) {
+                        AuditLogger.log(id, username, "LOGIN", "denied", clientIp,
+                            "Account is " + accountStatus + " - login denied");
+                        respondJson(exchange, 401, "{\"message\":\"account " + accountStatus + "\"}");
+                        return;
+                    }
 
                     // Password verification using SHA-256(password + salt) - matches schema.sql generation
                     Result<String, String> hashResult = PasswordUtil.hashPassword(password, salt);

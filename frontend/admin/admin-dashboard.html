@@ -3,18 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard </title>
-    <link rel="stylesheet" href="css/styles.css">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/admin/css/admin.css">
 </head>
 <body>
-  <h2>Admin Dashboard</h2>
-  <nav>
-    <a href="#" data-route="/admin/dashboard">Dashboard</a> |
-    <a href="#" data-route="/admin/logs">View Logs</a> |
-    <a href="#" data-route="/logout">Logout</a>
-  </nav>
-  <script src="../js/router.js"></script>
+    <div class="dashboard">
+        <div class="top-bar">
+            <div>
+                <h1>Admin Dashboard</h1>
+                <div class="subtitle">Top Secret Clearance • Full System Access</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
 
+        <div id="alertContainer"></div>
 
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">User Management</div>
+            </div>
+            <div class="section-body" id="usersContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading users...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-title">Audit Logs</div>
+                <button class="refresh-btn" onclick="refreshLogs()">Refresh</button>
+            </div>
+            <div class="section-body" id="logsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading audit logs...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/router.js"></script>
+    <script src="/admin/js/admin.js"></script>
 </body>
 </html>
