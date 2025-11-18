@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Logs</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Admin Console</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/admin/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link active" data-route="/admin/logs">View Logs</a></li>
+        <li><a href="#" class="nav-link" data-route="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>View Audit Logs</h2>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>IP</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="auditLogsTable">
+          <tr><td colspan="5" class="no-data">No logs available.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><a href="#" data-route="/admin/dashboard">Back to Admin Dashboard</a></p>
+  </div>
+
+  <script src="../js/router.js"></script>
+  <script>
+    // Access control: only allow admins
+    (function(){
+      const allowed = ['admin'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
+
+
+</body>
+</html>

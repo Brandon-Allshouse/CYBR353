@@ -69,9 +69,22 @@ class AuthHandler {
             if (response.ok) {
                 // Store user info in session
                 this.storeUserSession(data);
-                
-                // Redirect based on role
-                this.redirectUser(data.role || data.clearanceLevel);
+
+                // Prefer role-based redirect (server returns role). Use SPA router when available.
+                const role = (data.role || data.clearanceLevel || '').toString().toLowerCase();
+                this.storeUserSession(Object.assign({}, data, { role }));
+                setTimeout(() => {
+                    // map role -> route prefix (manager -> management)
+                    const prefix = (role === 'manager') ? 'management' : role;
+                    const target = `/${prefix}/dashboard`;
+                    if (window.appRouter) {
+                        window.appRouter.navigate(target);
+                    } else {
+                        // fallback to direct navigation to the role's dashboard HTML
+                        const fallback = `${prefix}/${prefix}-dashboard.html`;
+                        window.location.href = fallback;
+                    }
+                }, 300);
             } else {
                 // Show error message
                 this.showError(data.message || 'Invalid username or password');
@@ -165,10 +178,10 @@ class AuthHandler {
 
     redirectUser(role) {
         const dashboards = {
-            'customer': '/customer/dashboard',
-            'driver': '/driver/dashboard',
-            'manager': '/management/dashboard',
-            'admin': '/admin/dashboard'
+            'customer': 'Templates/Dashboard.html',
+            'driver': 'Templates/Dashboard.html',
+            'manager': 'Templates/Dashboard.html',
+            'admin': 'Templates/Dashboard.html'
         };
 
         const normalizedRole = role.toLowerCase();

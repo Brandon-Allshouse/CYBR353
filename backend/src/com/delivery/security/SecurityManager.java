@@ -54,6 +54,16 @@ public class SecurityManager {
         private final int level;
         SecurityLevel(int l) { level = l; }
         public int getLevel() { return level; }
+        
+        // Convert integer level (0-3) to SecurityLevel enum.
+        public static Result<SecurityLevel, String> fromInt(int lvl) {
+            for (SecurityLevel sl : SecurityLevel.values()) {
+                if (sl.level == lvl) {
+                    return Result.ok(sl);
+                }
+            }
+            return Result.err("Invalid clearance level: " + lvl);
+        }
     }
 
     public static class AuditLogger {

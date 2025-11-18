@@ -1,6 +1,6 @@
 package com.delivery.session;
 
-import com.delivery.security.SecurityLevel;
+import com.delivery.security.SecurityManager;
 import com.delivery.util.Result;
 
 import java.time.Instant;
@@ -23,11 +23,11 @@ public class SessionManager {
 
     public static class Session {
         public final String username;
-        public final SecurityLevel clearance;
+        public final SecurityManager.SecurityLevel clearance;
         public final String role;
         public Instant expiry;
 
-        public Session(String username, String role, SecurityLevel clearance, Instant expiry) {
+        public Session(String username, String role, SecurityManager.SecurityLevel clearance, Instant expiry) {
             this.username = username;
             this.role = role;
             this.clearance = clearance;
@@ -35,7 +35,7 @@ public class SessionManager {
         }
     }
 
-    public static String createSession(String username, String role, SecurityLevel clearance) {
+    public static String createSession(String username, String role, SecurityManager.SecurityLevel clearance) {
         String token = UUID.randomUUID().toString();
         Instant expiry = Instant.now().plusSeconds(timeoutSeconds);
         sessions.put(token, new Session(username, role, clearance, expiry));
