@@ -3,14 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> </title>
-    <link rel="stylesheet" href="css/styles.css">
+  <title>Account Information - Delivery System</title>
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
-  <h2>Customer Info</h2>
-  <p>Manage your account information here.</p>
-  <a href="#" data-route="/customer/dashboard">Back to Customer Dashboard</a>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery System</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/customer/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link active" data-route="/customer/info">Account Info</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/packages">View Packages</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/track">Track Packages</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>Customer Info</h2>
+    <h3>Account Information</h3>
+    <form id="accountForm" class="form">
+      <div class="form-group">
+        <label for="fullName">Full Name</label>
+        <input type="text" id="fullName" required />
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required />
+      </div>
+      <div class="form-group">
+        <label for="phone">Phone</label>
+        <input type="tel" id="phone" />
+      </div>
+      <div class="form-group">
+        <label for="address">Default Delivery Address</label>
+        <input type="text" id="address" />
+      </div>
+      <button type="submit" class="btn">Save Profile</button>
+    </form>
+
+    <p><a href="#" data-route="/customer/dashboard">Back to Customer Dashboard</a></p>
+  </div>
+
   <script src="../js/router.js"></script>
+  <script src="../js/orders.js"></script>
+  <script>
+    // Access control: only allow customers
+    (function(){
+      const allowed = ['customer'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
 
 
 

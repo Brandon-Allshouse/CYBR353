@@ -1,6 +1,6 @@
 package com.delivery.models;
 
-import com.delivery.security.SecurityLevel;
+import com.delivery.security.SecurityManager.SecurityLevel;
 
 public class User {
     private int id;

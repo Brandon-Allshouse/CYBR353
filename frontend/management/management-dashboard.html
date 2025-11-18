@@ -4,18 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Management Dashboard </title>
-    <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
-  <h2>Management Dashboard</h2>
-  <nav>
-    <a href="#" data-route="/management/dashboard">Dashboard</a> |
-    <a href="#" data-route="/management/assign-routes">Assign Routes</a> |
-    <a href="#" data-route="/management/transfer">Transfer Portal</a> |
-    <a href="#" data-route="/management/inventory">View Inventory</a> |
-    <a href="#" data-route="/logout">Logout</a>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery Management</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link active" data-route="/management/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/assign-routes">Assign Routes</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/transfer">Transfer Portal</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/inventory">View Inventory</a></li>
+        <li><a href="#" class="nav-link" data-route="/logout">Logout</a></li>
+      </ul>
+    </div>
   </nav>
+  <div class="container">
+    <section class="cards">
+      <div class="card">
+        <h3>Pending Assignments</h3>
+        <p id="pendingAssignments">0</p>
+      </div>
+      <div class="card">
+        <h3>Transfers</h3>
+        <p id="pendingTransfers">0</p>
+      </div>
+      <div class="card">
+        <h3>Inventory Alerts</h3>
+        <p id="inventoryAlerts">0</p>
+      </div>
+    </section>
+
+    <section>
+      <h3>Recent Orders</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Pickup</th>
+              <th>Delivery</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="managementOrdersTable">
+            <tr><td colspan="6" class="no-data">No recent orders.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
   <script src="../js/router.js"></script>
+  <script src="../js/management.js"></script>
+  <script>
+    // Access control: only allow managers
+    (function(){
+      const allowed = ['manager'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
 
 </body>
 </html>

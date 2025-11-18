@@ -4,16 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard </title>
-    <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
-  <h2>Admin Dashboard</h2>
-  <nav>
-    <a href="#" data-route="/admin/dashboard">Dashboard</a> |
-    <a href="#" data-route="/admin/logs">View Logs</a> |
-    <a href="#" data-route="/logout">Logout</a>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Admin Console</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link active" data-route="/admin/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/admin/logs">View Logs</a></li>
+        <li><a href="#" class="nav-link" data-route="/logout">Logout</a></li>
+      </ul>
+    </div>
   </nav>
+  <div class="container">
+    <section class="cards">
+      <div class="card">
+        <h3>System Health</h3>
+        <p id="systemHealth">Good</p>
+      </div>
+      <div class="card">
+        <h3>Audit Events</h3>
+        <p id="auditEvents">0</p>
+      </div>
+      <div class="card">
+        <h3>Active Sessions</h3>
+        <p id="activeSessions">0</p>
+      </div>
+    </section>
+
+    <section>
+      <h3>Recent Audit Logs</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>User</th>
+              <th>Action</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="auditLogTable">
+            <tr><td colspan="4" class="no-data">No logs to display.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
   <script src="../js/router.js"></script>
+  <script src="../js/management.js"></script>
+  <script>
+    // Access control: only allow admins
+    (function(){
+      const allowed = ['admin'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
 
 
 </body>

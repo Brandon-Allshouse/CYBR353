@@ -4,6 +4,26 @@
     color: white;
 }
 
+/* Base page styles */
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: #2563eb; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Center content inside .container by default */
+.container { box-sizing: border-box; }
+
 /* Navbar base styles: ensure links are readable against a solid background */
 .navbar {
     background-color: #0f172a; /* dark slate to contrast white text */

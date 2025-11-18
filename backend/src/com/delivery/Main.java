@@ -4,12 +4,10 @@ import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
 import com.delivery.util.EnvLoader;
 import com.delivery.util.Result;
-import com.delivery.security.AuditLogger;
+import com.delivery.security.SecurityManager.AuditLogger;
 import com.delivery.session.SessionManager;
 
 import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -70,7 +68,7 @@ public class Main {
 
             Result<SessionManager.Session, String> sessionResult = SessionManager.getSession(token);
             if (sessionResult.isErr()) {
-                AuditLogger.log("<unknown>", "WHOAMI", "denied", clientIp, sessionResult.unwrapErr());
+                AuditLogger.log(null, "<unknown>", "WHOAMI", "denied", clientIp, sessionResult.unwrapErr());
                 String resp = "{\"error\":\"unauthorized\"}";
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(401, resp.length());
@@ -81,7 +79,7 @@ public class Main {
 
             SessionManager.Session s = sessionResult.unwrap();
             String resp = String.format("{\"username\":\"%s\",\"role\":\"%s\",\"clearance\":\"%s\"}", s.username, s.role, s.clearance.name());
-            AuditLogger.log(s.username, "WHOAMI", "success", clientIp, "Session verified");
+            AuditLogger.log(null, s.username, "WHOAMI", "success", clientIp, "Session verified");
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, resp.length());
             exchange.getResponseBody().write(resp.getBytes());

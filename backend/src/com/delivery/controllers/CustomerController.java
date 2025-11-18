@@ -2,10 +2,16 @@ package com.delivery.controllers;
 
 import com.delivery.database.DatabaseConnection;
 import com.delivery.models.User;
-import com.delivery.security.*;
+import com.delivery.security.SecurityManager;
+import com.delivery.security.SecurityManager.AuditLogger;
+import com.delivery.security.SecurityManager.InputSanitizer;
+import com.delivery.security.SecurityManager.InputValidator;
+import com.delivery.security.SecurityManager.PasswordManager;
+import com.delivery.security.SecurityManager.RateLimiter;
+import com.delivery.security.SecurityManager.RecaptchaVerifier;
+import com.delivery.security.SecurityManager.ValidationResult;
 import com.delivery.util.PasswordUtil;
 import com.delivery.util.Result;
-import com.delivery.util.ValidationResult;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -72,7 +78,7 @@ public class CustomerController {
         String recaptchaToken = parsed.get("recaptchaToken");
 
         // STEP 1: Verify reCAPTCHA (bot protection)
-        Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
+        SecurityManager.Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
         if (recaptchaResult.isErr()) {
             AuditLogger.log(null, email, "REGISTRATION_ATTEMPT", "denied", clientIp,
                 "reCAPTCHA verification failed");
@@ -91,9 +97,9 @@ public class CustomerController {
         }
 
         // STEP 3: Sanitize inputs (additional XSS protection)
-        Result<String, String> nameResult = InputSanitizer.sanitizeString(name);
-        Result<String, String> emailResult = InputSanitizer.sanitizeString(email);
-        Result<String, String> phoneResult = InputSanitizer.sanitizeString(phone);
+        SecurityManager.Result<String, String> nameResult = InputSanitizer.sanitizeString(name);
+        SecurityManager.Result<String, String> emailResult = InputSanitizer.sanitizeString(email);
+        SecurityManager.Result<String, String> phoneResult = InputSanitizer.sanitizeString(phone);
 
         if (nameResult.isErr() || emailResult.isErr() || phoneResult.isErr()) {
             AuditLogger.log(null, email, "REGISTRATION_ATTEMPT", "error", clientIp,
@@ -110,7 +116,7 @@ public class CustomerController {
         String username = sanitizedEmail;
 
         // STEP 4: Check rate limiting (prevent registration abuse)
-        Result<Boolean, String> rateLimitResult = RateLimiter.allowRequest(clientIp, "REGISTER");
+        SecurityManager.Result<Boolean, String> rateLimitResult = RateLimiter.allowRequest(clientIp, "REGISTER", 5);
         if (rateLimitResult.isErr()) {
             AuditLogger.log(null, username, "REGISTRATION_ATTEMPT", "denied", clientIp,
                 rateLimitResult.unwrapErr());

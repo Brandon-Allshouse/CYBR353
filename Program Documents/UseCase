@@ -1,0 +1,252 @@
+Use Case 1: Create a new customer account
+Actors: New Customer, System, Email Service
+Inputs: 
+•	Customer personal information (name, email, phone)
+•	Delivery addresses
+•	Password credentials
+Outputs:
+•	Account confirmation
+•	Create customer ID
+Normal Operation:
+New customers visit the registration page, where the system then prompts the user for their information along with a password. The system will then validate this with the requirements before creating the account. Once this is completed, the customer will be granted access to an account with unclassified access and will receive a unique customer ID.
+Exception/Remediation:
+•	Invalid email format: The system will display an error requesting a valid email address
+•	Weak password: The system will prompt the user to enter a stronger password
+•	Duplicate account: The system will notify the user that the email is already linked to an account
+
+Use Case 2: Place package delivery order
+Actors: Established Customer, System, Payment Gateway, Inventory System
+Inputs:
+•	Customer credentials to login
+•	Package details
+•	Pickup address
+•	Delivery address
+•	Delivery directions
+•	Payment information
+Outputs:
+•	Order confirmation number
+•	Tracking ID
+•	Estimated delivery time
+•	Updated customer order history
+Normal Operation:
+Once the customer is logged into their account, they will go to the cart page to place the order. The system will calculate the price and then the customer will have to enter their payment information. Once the payment is successful, the system will generate a tracking ID and the package will be added to the customer's order history.
+Exception/Remediation: 
+•	Invalid login credentials: The customer is prompted to reenter credentials and after 3 failed attempts the account is locked
+•	Incomplete package information: The system will highlight the missing information withing the form
+•	Invalid delivery address: The system prompts the user to correct the information
+•	Payment declined: The system prompts the user to make sure the information provide is accurate and if not then to try a different payment method
+•	System timeout: The system will timeout if the customer has not completed the order after 30 minutes
+
+Use Case 3: Track package status
+Actors: Established customer, system, package location
+Inputs:
+•	Customer credentials
+•	Tracking ID
+Outputs: 
+•	Current package status
+•	Location information
+•	Delivery history timeline
+Normal Operations:
+The customer will log into their account and then there will be a tracking page that the customer can go to. Once on that page, the customer can enter the tracking ID and then press the tracking page. Once this is completed, the customer will be able to see the tracking information of their package.
+Exception/Remediation
+•	Invalid tracking ID: The system displays a message saying invalid tracking number
+•	Unauthorized access attempt: The system blocks the customer from viewing any information 
+•	Package delayed: The system will update with new delivery time
+Use Case 4: Assign the driver a route
+Actors: Management, system, route optimization algorithm, driver
+Inputs:
+•	Date for route assignment
+•	Available drivers and their information
+•	Packages ready for delivery
+Outputs:
+•	Optimized delivery routes
+•	Driver assignments
+•	Time estimates
+•	Route for each driver
+Normal Operation:
+Management will log into their account and gain secret clearance in doing so. Management can then select the route assignment page from the dashboard, and it will show all packages that are scheduled for delivery. The algorithm can then process these points and can create routes for each of the drivers which can then be assigned to each driver within this page. The drivers can then view their account and receive their route for the day.
+Exception/Remediation
+•	Insufficient drivers available: Sends an alert to management and then management decides what to do
+•	Optimization route algorithm fails: The system will retry again
+•	Driver doesn’t come into work: Routes are recreated by management without including this driver
+
+Use Case 5: Update Delivery Status
+Actors: Driver, System, Customer notification service
+Inputs:
+•	Driver credentials
+•	Package tracking ID
+•	Current package location
+•	Status update
+Outputs:
+•	Updated package status
+•	Timestamp of update
+•	Customer notification
+•	Update route progress\
+Normal Procedures:
+The driver will log into their account and once logged in, they can go to the driver's route page. Once on this page, it will show exactly their route for the day and once they drop a package off, there will be a button in which they can click to show that a package was delivered. 
+Exception/Remediation:
+•	Cannot deliver: Package needs signature so the status is updated
+•	Wrong address: Package is returned back to the facility and customer is notified
+
+Use Case 6: Transfer Packages between facilities
+Actors: Management, system, inventory system
+Inputs: 
+•	Facility ID
+•	Destination Facility ID
+•	Package tracking ID
+•	Transport method
+Outputs:
+•	Updated inventory
+•	Package location updates
+•	Transfer confirmation
+Normal Operation: 
+The manager will login with their credentials, gaining secret access. The system will then display all packages that need to be transferred to a new facility. The manager can then click a button to change the status of the packages to “packages are in route”, and then another facility can mark them as delivered. Once these packages are delivered, the system will automatically transfer the inventory to the other facility. 
+Exception/Remediation:
+•	Package not found during loading/unloading: Management is notified
+•	Unauthorized transfer attempt: The system denies operation and notifies management
+
+Use Case 7: Check Facility Inventory
+Actors: Management, Inventory System, System
+Inputs:
+•	Facility ID
+•	Admin ID
+Outputs: 
+•	Inventory Report
+Normal operation:
+The manager will log in with credentials and gain secret access. The manager can then go to the logs page and request the logs on the inventory. The system will then generate the report and deliver it back to the manager.
+Exception/Remediation:
+•	Inventory log is empty: system admin is notified
+
+
+Use case 8: Log in
+Actors: Management, System, Email Service
+Inputs:
+•	Email
+•	Password
+•	2FA Code
+Outputs:
+•	Dashboard Access
+Normal operation:
+Once the user enters their credentials to gain access to their account, the system will then send an email for 2FA. Once the user receives this email, they will enter the code into the system. After validating this code, the system will allow the user to login. 
+Exceptions/Remediation:
+•	Invalid credentials: deny access, start attempt counter
+•	Too many failures: temporarily lock account and notify account
+•	2FA code not matching: deny access to dashboard
+
+Use case 9: Return Package
+Actors: System, Established Customer, Management
+Inputs: 
+•	Original Order ID
+•	Facility ID
+Outputs:
+•	New Order ID
+•	Updated Inventory
+Normal Operation:
+The facility receives return packages with their original order ID included. The package then will be added back into inventory, and the package will get a new order ID to go to its return address.
+Exceptions/remediations:
+•	Package is given to facility directly without a return address: get original order ID to create return label
+•	Item is given to facility unpackaged: item gets packaged and return address printed
+
+Use case 10: Edit Package Information
+Actors: Established Customer, System, inventory system
+Inputs:
+•	Order ID
+•	New Package Info
+Outputs: 
+•	edited package information
+•	Confirmation of edited information
+Normal Operation:
+The user will login to their account and can input their order ID. The system will then show the package information in which the user can edit. After editing the system then will update the database with this new information.
+Exceptions/remedies:
+Package already delivered or in transit: cannot be changed
+Invalid information: cannot confirm changes
+
+Misuse Case 1: SQL Injection During Account Creation
+Target: Creating a New Customer Account page
+Description: 
+The attacker can attempt to exploit the account registration page by injecting malicious SQL commands into the input fields. This could lead to altering data, exposure of data, and access to the database.
+Mitigation/Prevention: 
+Implement strict input validation and sanitization for all input fields. 
+Use parametrized queries to prevent direct SQL command execution.
+
+Misuse Case 2: Impersonation During Login
+Threat Actor: Unauthorized User
+Description:
+An attacker can use stolen credentials to log into an account, gaining access to sensitive information or financial data. 
+Mitigation/Prevention:
+Implement multi factor authentication
+Set login attempt limits, and temporary lockouts
+
+Misuse Case 3: Data Tampering in Package Editing
+Threat Actor: Malicious user or customer
+Description:
+An attacker will modify package details such as destination and steal shipments or steal information. 
+Mitigation/Prevention:
+Require password information to edit package data.
+Implement audit logs to show all changes.
+Use encryption to store transmitted data.
+
+Misuse Case 4: Denial of Service Attack (DoS)
+Threat Actor: External attacker or a botnet
+Target Use Case: Log in, Place Delivery Order
+Description: 
+An attacker can flood the system with repeated login attempts or fake order submissions. This then will be overwhelming for the server, preventing legitimate users from accessing the platform.
+Mitigation/Prevention: 
+Use rate limiting to detect and block excessive requests
+Add CAPTCHA challenges to stop bot activity
+
+Misuse Case 5: Insider Data Theft
+Threat Actor: Malicious employee or insider with access
+Target Use Case: Check facility inventory, transfer packages between facilities, see route optimization algorithms
+Description: 
+An insider can misuse their access to extract sensitive information like customer or operational data.
+Mitigation/Prevention
+Apply principle of least privilege to separate account access
+Conduct access audits and track all sensitive data queries
+Require management approval for bulk data exports or downloads
+
+Misuse Case 6: Session Hijacking
+Threat Actor: External Attacker
+Target Use Case: Log in, create new account
+Description: 
+An attacker intercepts or steals a user's session token after successful authentication, allowing them to impersonate the legitimate user without needing their credentials. This can occur through network sniffing or cross-site scripting.
+Mitigation/Prevention
+Use secure, HTTP Only cookies for session management
+Implement session timeouts for inactive users
+
+Misuse Case 7: Brute force attack
+Threat Actor: External Attacker
+Target Use Case: Login
+Description: 
+An attacker attempts to log into an account buy try every password they can.
+Mitigation/Prevention
+Require strong passwords
+If too many failed attempts happen from an IP ban that IP.
+
+Misuse Case 8: Escalate privilege 
+Threat Actor: External Attacker who has a compromised account
+Target Use Case: Use cases outside of compromised accounts access rights
+Description: 
+An attacker who has access to a compromised account tries to move vertically and horizontally in the system to get access to things they don't have access to. Like moving vertical to system admin to see optimized routes.
+Mitigation/Prevention
+Logging what accounts do in the system
+
+Misuse Case 9: Delivery Interference
+Threat Actor: Malicious Customer
+Target Use Case: Update delivery status, edit package information.
+Description: 
+An attacker modifies the delivery information or falsely updates the delivery status to redirect the packages.
+Mitigation/Prevention
+Implement comprehensive audit logs tracking all modifications
+Restrict editing capabilities once packages are in transit following the BLP
+
+Misuse Case 10: Notification Spoofing
+Threat Actor: External Attacker or Phishing Actor
+Target Use Case: Update Delivery Status, Transfer package in between facilities
+Description: 
+An attacker sends fake delivery notifications or status updates to customers, impersonating the delivery system. This can be used for phishing attacks, stealing personal information, or creating confusion about package locations.
+Mitigation/Prevention
+Implement verified communication channels
+Digital notification signing
+Educate the user to verify notifications through their account.
+
