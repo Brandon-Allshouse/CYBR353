@@ -1,11 +1,12 @@
 package com.delivery.controllers;
 
 import com.delivery.database.DatabaseConnection;
-import com.delivery.security.AuditLogger;
-import com.delivery.security.BLPAccessControl;
-import com.delivery.security.SecurityLevel;
 import com.delivery.session.SessionManager;
 import com.delivery.util.Result;
+import com.delivery.security.SecurityManager;
+import static com.delivery.security.SecurityManager.AuditLogger;
+import static com.delivery.security.SecurityManager.BLPAccessControl;
+import static com.delivery.security.SecurityManager.SecurityLevel;
 
 import java.io.BufferedReader;
 import java.io.IOException;

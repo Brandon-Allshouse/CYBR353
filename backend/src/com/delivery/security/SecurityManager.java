@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.delivery.util.EnvLoader;
 
 public class SecurityManager {
     // T: success value type
@@ -321,11 +322,12 @@ public class SecurityManager {
     public static Result<Boolean, String> verifyRecaptcha(String token, String clientIp) {
             if (token == null || token.trim().isEmpty()) return Result.err("reCAPTCHA token required");
 
-            String secret = System.getenv("RECAPTCHA_SECRET_KEY");
-            if (secret == null || secret.trim().isEmpty()) {
-                AuditLogger.logError("RECAPTCHA_CONFIG", "RECAPTCHA_SECRET_KEY not set in environment", "SYSTEM");
+            com.delivery.util.Result<String, String> secretResult = EnvLoader.get("RECAPTCHA_SECRET_KEY");
+            if (secretResult.isErr()) {
+                AuditLogger.logError("RECAPTCHA_CONFIG", "RECAPTCHA_SECRET_KEY not set in environment: " + secretResult.unwrapErr(), "SYSTEM");
                 return Result.err("reCAPTCHA not configured on server");
             }
+            String secret = secretResult.unwrap();
 
             try {
                 StringBuilder postData = new StringBuilder();
