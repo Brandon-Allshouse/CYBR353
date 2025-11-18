@@ -3,15 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> </title>
-    <link rel="stylesheet" href="css/styles.css">
+  <title>Inventory - Delivery System</title>
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
   <h2>View Inventory</h2>
-  <p>View facility inventory and package status.</p>
-  <a href="#" data-route="/management/dashboard">Back to Management Dashboard</a>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery Management</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/management/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/assign-routes">Assign Routes</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/transfer">Transfer Portal</a></li>
+        <li><a href="#" class="nav-link active" data-route="/management/inventory">View Inventory</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>View Inventory</h2>
+    <h3>Facility Inventory</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Facility</th>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Last Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryTable">
+          <tr><td colspan="5" class="no-data">No inventory data available.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><a href="#" data-route="/management/dashboard">Back to Management Dashboard</a></p>
+  </div>
+
   <script src="../js/router.js"></script>
+  <script src="../js/management.js"></script>
+  <script>
+    // Access control: only allow managers
+    (function(){
+      const allowed = ['manager'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
 
 
-</body>
-</html>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery Management</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/management/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/assign-routes">Assign Routes</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/transfer">Transfer Portal</a></li>
+        <li><a href="#" class="nav-link active" data-route="/management/inventory">View Inventory</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>View Inventory</h2>

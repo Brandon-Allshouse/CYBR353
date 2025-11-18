@@ -2,10 +2,11 @@ package com.delivery.controllers;
 
 import com.delivery.database.DatabaseConnection;
 import com.delivery.models.User;
-import com.delivery.security.AuditLogger;
-import com.delivery.security.LoginLockout;
-import com.delivery.security.RecaptchaVerifier;
-import com.delivery.security.SecurityLevel;
+import com.delivery.security.SecurityManager;
+import com.delivery.security.SecurityManager.AuditLogger;
+import com.delivery.security.SecurityManager.RecaptchaVerifier;
+import com.delivery.security.SecurityManager.LoginLockout;
+import com.delivery.security.SecurityManager.SecurityLevel;
 import com.delivery.session.SessionManager;
 import com.delivery.util.PasswordUtil;
 import com.delivery.util.Result;
@@ -59,7 +60,7 @@ public class AuthenticationController {
         }
 
         // Verify reCAPTCHA (bot protection)
-        Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
+        SecurityManager.Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
         if (recaptchaResult.isErr()) {
             AuditLogger.log(null, username, "LOGIN", "denied", clientIp, "reCAPTCHA verification failed");
             respondJson(exchange, 400, "{\"message\":\"" + recaptchaResult.unwrapErr() + "\"}");
@@ -67,13 +68,13 @@ public class AuthenticationController {
         }
 
         // Check if account is locked due to too many failed login attempts
-        Result<LoginLockout.LockoutStatus, String> lockoutResult = LoginLockout.isAccountLocked(username, clientIp);
+        SecurityManager.Result<Boolean, String> lockoutResult = LoginLockout.isAccountLocked(username, clientIp);
         if (lockoutResult.isOk()) {
-            LoginLockout.LockoutStatus status = lockoutResult.unwrap();
-            if (status.isLocked) {
-                // Account is locked - log with actual user_id and deny access
-                AuditLogger.log(status.userId, username, "LOGIN", "denied", clientIp,
-                              "Login attempt while account is locked until " + status.lockoutUntil);
+            Boolean isLocked = lockoutResult.unwrap();
+            if (isLocked) {
+                // Account is locked - deny access
+                AuditLogger.log(null, username, "LOGIN", "denied", clientIp,
+                              "Login attempt while account is locked");
                 respondJson(exchange, 401, "{\"message\":\"account temporarily locked\"}");
                 return;
             }
@@ -135,7 +136,7 @@ public class AuthenticationController {
                     }
 
                     // Convert integer clearance (0-3) to SecurityLevel enum for BLP enforcement
-                    Result<SecurityLevel, String> clearanceResult = SecurityLevel.fromInt(clearanceLevel);
+                    SecurityManager.Result<SecurityLevel, String> clearanceResult = SecurityLevel.fromInt(clearanceLevel);
                     if (clearanceResult.isErr()) {
                         System.err.println("Invalid clearance level: " + clearanceResult.unwrapErr());
                         AuditLogger.log(id, username, "LOGIN", "error", clientIp, "Invalid clearance level");
@@ -147,14 +148,14 @@ public class AuthenticationController {
                     User user = new User((int)id, username, role, clearance);
 
                     // Reset failed login attempt counter on successful authentication
-                    LoginLockout.resetFailedAttempts(id, username, clientIp);
+                    LoginLockout.resetFailedAttempts(username);
 
                     // Session token stored in-memory - consider Redis for distributed deployments
                     String token = SessionManager.createSession(user.getUsername(), user.getRole(), user.getClearance());
                     AuditLogger.log(id, username, "LOGIN", "success", clientIp, "Role: " + role + ", Clearance: " + clearanceLevel);
 
                     String response = String.format(
-                        "{\"username\":\"%s\",\"role\":\"%s\",\"clearanceLevel\":%d,\"token\":\"%s\"}",
+                        "{\"username\":\"%s\",\"role\":\"%s\",\"clearanceLevel\":%d,\"token\":\"%s\",\"redirect\":\"Templates/Dashboard.html\"}",
                         user.getUsername(),
                         user.getRole(),
                         clearanceLevel,

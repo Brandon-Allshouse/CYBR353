@@ -4,47 +4,93 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="/admin/css/admin.css">
+    <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
-    <div class="dashboard">
-        <div class="top-bar">
-            <div>
-                <h1>Admin Dashboard</h1>
-                <div class="subtitle">Top Secret Clearance • Full System Access</div>
-            </div>
-            <button class="logout-btn" onclick="logout()">Logout</button>
-        </div>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Admin Console</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link active" data-route="/admin/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/admin/logs">View Logs</a></li>
+        <li><a href="#" class="nav-link" data-route="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
 
-        <div id="alertContainer"></div>
+  <div class="container">
+    <section class="cards">
+      <div class="card">
+        <h3>System Health</h3>
+        <p id="systemHealth">Good</p>
+      </div>
+      <div class="card">
+        <h3>Audit Events</h3>
+        <p id="auditEvents">0</p>
+      </div>
+      <div class="card">
+        <h3>Active Sessions</h3>
+        <p id="activeSessions">0</p>
+      </div>
+    </section>
 
-        <div class="section-card">
-            <div class="section-header">
-                <div class="section-title">User Management</div>
-            </div>
-            <div class="section-body" id="usersContainer">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading users...</p>
-                </div>
-            </div>
-        </div>
+    <div id="alertContainer"></div>
 
-        <div class="section-card">
-            <div class="section-header">
-                <div class="section-title">Audit Logs</div>
-                <button class="refresh-btn" onclick="refreshLogs()">Refresh</button>
-            </div>
-            <div class="section-body" id="logsContainer">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading audit logs...</p>
-                </div>
-            </div>
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">User Management</div>
+      </div>
+      <div class="section-body" id="usersContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading users...</p>
         </div>
+      </div>
     </div>
 
-    <script src="/js/router.js"></script>
-    <script src="/admin/js/admin.js"></script>
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">Audit Logs</div>
+        <button class="refresh-btn" onclick="refreshLogs()">Refresh</button>
+      </div>
+      <div class="section-body" id="logsContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading audit logs...</p>
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <h3>Recent Audit Logs</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>User</th>
+              <th>Action</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="auditLogTable">
+            <tr><td colspan="4" class="no-data">No logs to display.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="../js/router.js"></script>
+  <script src="../admin/js/admin.js"></script>
+  <script>
+    // Access control: only allow admins
+    (function(){
+      const allowed = ['admin'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
 </body>
 </html>

@@ -3,15 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> </title>
-    <link rel="stylesheet" href="css/styles.css">
+  <title>Transfer Portal - Delivery System</title>
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
   <h2>Transfer Portal</h2>
-  <p>Manage package transfers between facilities.</p>
-  <a href="#" data-route="/management/dashboard">Back to Management Dashboard</a>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery Management</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/management/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/assign-routes">Assign Routes</a></li>
+        <li><a href="#" class="nav-link active" data-route="/management/transfer">Transfer Portal</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/inventory">View Inventory</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>Transfer Portal</h2>
+    <h3>Transfer Packages Between Facilities</h3>
+    <form id="transferForm" class="form">
+      <div class="form-group">
+        <label for="fromFacility">From Facility</label>
+        <input type="text" id="fromFacility" required />
+      </div>
+      <div class="form-group">
+        <label for="toFacility">To Facility</label>
+        <input type="text" id="toFacility" required />
+      </div>
+      <div class="form-group">
+        <label for="transferItems">Packages (tracking numbers, comma separated)</label>
+        <textarea id="transferItems" rows="3"></textarea>
+      </div>
+      <button type="submit" class="btn">Create Transfer</button>
+    </form>
+
+    <section>
+      <h3>Active Transfers</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Transfer ID</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Packages</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="activeTransfersTable">
+            <tr><td colspan="5" class="no-data">No active transfers.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <p><a href="#" data-route="/management/dashboard">Back to Management Dashboard</a></p>
+  </div>
+
   <script src="../js/router.js"></script>
+  <script src="../js/management.js"></script>
+  <script>
+    // Access control: only allow managers
+    (function(){
+      const allowed = ['manager'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
 
 
-</body>
-</html>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery Management</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/management/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/assign-routes">Assign Routes</a></li>
+        <li><a href="#" class="nav-link active" data-route="/management/transfer">Transfer Portal</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/inventory">View Inventory</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>Transfer Portal</h2>
+    <h3>Transfer Packages Between Facilities</h3>

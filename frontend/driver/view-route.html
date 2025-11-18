@@ -3,14 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> </title>
-    <link rel="stylesheet" href="css/styles.css">
+  <title>View Route - Delivery System</title>
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
-  <h2>View Route</h2>
-  <p>View your assigned delivery route.</p>
-  <a href="#" data-route="/driver/dashboard">Back to Driver Dashboard</a>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery System</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/driver/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link active" data-route="/driver/route">View Route</a></li>
+        <li><a href="#" class="nav-link" data-route="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>View Route</h2>
+    <h3>Assigned Route</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Stop #</th>
+            <th>Address</th>
+            <th>ETA</th>
+            <th>Package(s)</th>
+            <th>Notes</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="routeStopsTable">
+          <tr><td colspan="6" class="no-data">No route assigned.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><a href="#" data-route="/driver/dashboard">Back to Driver Dashboard</a></p>
+  </div>
+
   <script src="../js/router.js"></script>
+  <script src="../js/driver.js"></script>
+  <script>
+    // Access control: only allow drivers
+    (function(){
+      const allowed = ['driver'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
 
 </body>
 </html>

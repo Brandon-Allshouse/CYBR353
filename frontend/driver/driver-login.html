@@ -3,14 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> </title>
-    <link rel="stylesheet" href="css/styles.css">
+  <title>Driver Login - Delivery System</title>
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
   <h2>Driver Login</h2>
-  <p>Driver-specific login page.</p>
-  <a href="#" data-route="/login">Back to Login</a>
+  <div class="container">
+    <h3>Driver Login</h3>
+    <form id="driverLoginForm" class="form">
+      <div class="form-group">
+        <label for="driverId">Driver ID</label>
+        <input type="text" id="driverId" required />
+      </div>
+      <div class="form-group">
+        <label for="driverPassword">Password</label>
+        <input type="password" id="driverPassword" required />
+      </div>
+      <button type="submit" class="btn">Login</button>
+    </form>
+
+    <p><a href="#" data-route="/login">Back to Login</a></p>
+  </div>
+
   <script src="../js/router.js"></script>
+  <script src="../js/driver.js"></script>
 
 
 
