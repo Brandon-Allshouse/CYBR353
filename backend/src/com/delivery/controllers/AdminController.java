@@ -23,17 +23,10 @@ import java.util.Map;
 
 import com.sun.net.httpserver.HttpExchange;
 
-/**
- * AdminController - Handles administrative operations
- * BLP Requirement: All endpoints require TOP_SECRET clearance (admin role)
- * Implements audit logging for all administrative actions
- */
+// AdminController - administrative operations (audit logs, user management)
 public class AdminController {
 
-    /**
-     * GET /admin/logs - Retrieve audit logs with optional filtering
-     * BLP: TOP_SECRET only (audit logs classified as TOP_SECRET)
-     */
+    // handleGetLogs - GET /admin/logs
     public static void handleGetLogs(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 
@@ -161,10 +154,7 @@ public class AdminController {
         }
     }
 
-    /**
-     * GET /admin/users - List all users
-     * BLP: TOP_SECRET only (user PII is SECRET, but admin access is TOP_SECRET)
-     */
+    // GET /admin/users
     public static void handleGetUsers(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 
@@ -259,10 +249,7 @@ public class AdminController {
         }
     }
 
-    /**
-     * PUT /admin/users/:userId/role - Change user role
-     * BLP: TOP_SECRET only, cannot promote to admin, cannot modify other admins
-     */
+    // PUT /admin/users/:userId/role
     public static void handleUpdateUserRole(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 
@@ -391,10 +378,7 @@ public class AdminController {
         }
     }
 
-    /**
-     * PUT /admin/users/:userId/status - Change account status (suspend/activate/revoke)
-     * BLP: TOP_SECRET only, cannot modify other admin accounts
-     */
+    // handleUpdateUserStatus
     public static void handleUpdateUserStatus(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 

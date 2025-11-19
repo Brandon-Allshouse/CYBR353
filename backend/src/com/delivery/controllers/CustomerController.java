@@ -77,7 +77,7 @@ public class CustomerController {
         String password = parsed.get("password");
         String recaptchaToken = parsed.get("recaptchaToken");
 
-        // STEP 1: Verify reCAPTCHA (bot protection)
+        // Verify reCAPTCHA (bot protection)
         SecurityManager.Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
         if (recaptchaResult.isErr()) {
             AuditLogger.log(null, email, "REGISTRATION_ATTEMPT", "denied", clientIp,
@@ -86,7 +86,7 @@ public class CustomerController {
             return;
         }
 
-        // STEP 2: Validate all inputs using existing validators
+        // Validate all inputs using existing validators
         ValidationResult validation = InputValidator.validateRegistration(name, email, phone, password);
         if (!validation.isValid()) {
             String errors = String.join(", ", validation.getErrors());
@@ -96,7 +96,7 @@ public class CustomerController {
             return;
         }
 
-        // STEP 3: Sanitize inputs (additional XSS protection)
+        // Sanitize inputs (additional XSS protection)
         SecurityManager.Result<String, String> nameResult = InputSanitizer.sanitizeString(name);
         SecurityManager.Result<String, String> emailResult = InputSanitizer.sanitizeString(email);
         SecurityManager.Result<String, String> phoneResult = InputSanitizer.sanitizeString(phone);
@@ -115,7 +115,7 @@ public class CustomerController {
         // Use email as username for customers (simpler UX)
         String username = sanitizedEmail;
 
-        // STEP 4: Check rate limiting (prevent registration abuse)
+        // Check rate limiting (prevent registration abuse)
         SecurityManager.Result<Boolean, String> rateLimitResult = RateLimiter.allowRequest(clientIp, "REGISTER", 5);
         if (rateLimitResult.isErr()) {
             AuditLogger.log(null, username, "REGISTRATION_ATTEMPT", "denied", clientIp,
@@ -124,7 +124,7 @@ public class CustomerController {
             return;
         }
 
-        // STEP 5: Get database connection
+        // Get database connection
         Result<Connection, String> connResult = DatabaseConnection.getConnection();
         if (connResult.isErr()) {
             System.err.println("Database connection error: " + connResult.unwrapErr());
@@ -137,7 +137,7 @@ public class CustomerController {
         Connection conn = connResult.unwrap();
 
         try {
-            // STEP 6: Check for duplicate username/email
+            // Check for duplicate username/email
             String checkSql = "SELECT user_id FROM users WHERE username = ?";
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
                 checkStmt.setString(1, username);
@@ -151,7 +151,7 @@ public class CustomerController {
                 }
             }
 
-            // STEP 7: Generate salt and hash password
+            // Generate salt and hash password
             String salt = PasswordManager.generateSalt();
             Result<String, String> hashResult = PasswordUtil.hashPassword(password, salt);
 
@@ -165,7 +165,7 @@ public class CustomerController {
 
             String passwordHash = hashResult.unwrap();
 
-            // STEP 8: Insert new customer user
+            // Insert new customer user
             // BLP Model: All customers start with clearance_level = 0 (Unclassified)
             String insertSql = "INSERT INTO users (username, password_hash, salt, email, phone, full_name, role, clearance_level) " +
                              "VALUES (?, ?, ?, ?, ?, ?, 'customer', 0)";
@@ -194,12 +194,12 @@ public class CustomerController {
                     if (generatedKeys.next()) {
                         long userId = generatedKeys.getLong(1);
 
-                        // STEP 9: Log successful registration
+                        // Log successful registration
                         AuditLogger.log(userId, username, "REGISTRATION", "success", clientIp,
                             String.format("New customer account created - Name: %s, Phone: %s, Clearance: 0 (Unclassified)",
                                 sanitizedName, sanitizedPhone));
 
-                        // STEP 10: Return success response
+                        // Return success response
                         String response = String.format(
                             "{\"success\":true,\"userId\":%d,\"username\":\"%s\",\"message\":\"Account created successfully. You can now log in.\"}",
                             userId, escapeJson(username)
@@ -271,10 +271,7 @@ public class CustomerController {
         }
     }
 
-    /**
-     * Escapes special characters in strings for JSON output
-     * Prevents JSON injection attacks
-     */
+    // Escapes special characters in strings for JSON output
     private static String escapeJson(String str) {
         if (str == null) return "";
         return str.replace("\\", "\\\\")

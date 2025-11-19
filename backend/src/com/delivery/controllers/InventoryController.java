@@ -14,16 +14,10 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/**
- * InventoryController - HTTP endpoints for inventory management
- * Handles requests for viewing facility inventory (managers only)
- */
+// InventoryController - inventory-related endpoints
 public class InventoryController {
 
-    /**
-     * Handle GET /api/inventory - Get all inventory across all facilities
-     * Requires SECRET clearance (manager or admin)
-     */
+    // Handle GET /api/inventory - Get all inventory
     public static void handleGetAllInventory(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 
@@ -78,10 +72,7 @@ public class InventoryController {
         respondJson(exchange, 200, json);
     }
 
-    /**
-     * Handle GET /api/inventory/facility/:id - Get inventory for specific facility
-     * Requires SECRET clearance (manager or admin)
-     */
+    // Handle GET /api/inventory/facility/:facilityId - Get inventory for a specific facility
     public static void handleGetInventoryByFacility(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 
@@ -153,10 +144,7 @@ public class InventoryController {
         respondJson(exchange, 200, json);
     }
 
-    /**
-     * Handle GET /api/facilities - Get list of all facilities
-     * Requires CONFIDENTIAL clearance (driver or above)
-     */
+    // Handle GET /api/inventory/facilities - Get all facilities
     public static void handleGetFacilities(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 
@@ -212,10 +200,7 @@ public class InventoryController {
         respondJson(exchange, 200, json);
     }
 
-    /**
-     * Handle GET /api/inventory/search/:trackingNumber - Search inventory by tracking number
-     * Requires SECRET clearance (manager or admin)
-     */
+    // Handle GET /api/inventory/search/:trackingNumber - Search inventory by tracking number
     public static void handleSearchInventory(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 
@@ -287,9 +272,7 @@ public class InventoryController {
 
     // Helper methods
 
-    /**
-     * Extract session from HTTP request (cookie or Authorization header)
-     */
+    // Get session from request
     private static Result<SessionManager.Session, String> getSessionFromRequest(HttpExchange exchange) {
         String token = null;
 
@@ -320,9 +303,7 @@ public class InventoryController {
         return SessionManager.getSession(token);
     }
 
-    /**
-     * Convert list of InventoryItems to JSON array
-     */
+    // Convert list of InventoryItems to JSON array
     private static String inventoryListToJson(List<InventoryItem> items) {
         StringBuilder json = new StringBuilder();
         json.append("[");
@@ -336,9 +317,7 @@ public class InventoryController {
         return json.toString();
     }
 
-    /**
-     * Convert list of Facilities to JSON array
-     */
+    // Convert list of Facilities to JSON array
     private static String facilitiesListToJson(List<Facility> facilities) {
         StringBuilder json = new StringBuilder();
         json.append("[");
@@ -357,9 +336,7 @@ public class InventoryController {
         return json.toString();
     }
 
-    /**
-     * Escape JSON strings
-     */
+   // Prevents JSON injection attacks
     private static String escapeJson(String str) {
         if (str == null) return "";
         return str.replace("\\", "\\\\")
@@ -369,9 +346,7 @@ public class InventoryController {
                  .replace("\t", "\\t");
     }
 
-    /**
-     * Send JSON response
-     */
+    // Response helpers
     private static void respondJson(HttpExchange exchange, int code, String body) throws IOException {
         exchange.getResponseHeaders().add("Content-Type", "application/json");
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
