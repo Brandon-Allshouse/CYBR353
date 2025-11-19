@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+2<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Customer Dashboard</title>
-  <link rel="stylesheet" href="../css/main.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Customer Dashboard</title>
+  <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
   <nav class="navbar">
@@ -21,27 +21,22 @@
       </ul>
     </div>
   </nav>
-
   <div class="container">
-    <div class="welcome-section">
-      <h2>Customer Dashboard</h2>
-      <p>Overview of your active deliveries and recent activity.</p>
-
-      <div class="quick-links">
-        <div class="card">
-          <h3>Active Packages</h3>
-          <p id="activeCount">0</p>
-        </div>
-        <div class="card">
-          <h3>Pending Returns</h3>
-          <p id="returnCount">0</p>
-        </div>
-        <div class="card">
-          <h3>Recent Activity</h3>
-          <p id="recentActivity">None</p>
-        </div>
+    <h2>Customer Dashboard</h2>
+    <section class="cards">
+      <div class="card">
+        <h3>Active Packages</h3>
+        <p id="activeCount">0</p>
       </div>
-    </div>
+      <div class="card">
+        <h3>Pending Returns</h3>
+        <p id="returnCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Recent Activity</h3>
+        <p id="recentActivity">None</p>
+      </div>
+    </section>
 
     <section class="section">
       <h3>Your Packages</h3>
@@ -66,8 +61,8 @@
     </section>
   </div>
 
-  <script src="../js/router.js"></script>
-  <script src="../js/orders.js"></script>
+  <script src="/js/router.js"></script>
+  <script src="/js/orders.js"></script>
 
   <script>
     // Access control: only allow customers
@@ -81,16 +76,11 @@
         if (!allowed.includes(role)) {
           alert('Access denied: insufficient permissions');
           const destPrefix = (role === 'manager') ? 'management' : role;
-          if (destPrefix) {
-            window.location.href = `/${destPrefix}/dashboard`;
-          } else {
-            window.location.href = '/login';
-          }
+          if (destPrefix) window.location.href = `/${destPrefix}/dashboard`; else window.location.href = '/login';
         }
-      } catch (e) {
-        window.location.href = '/login';
-      }
+      } catch(e) { window.location.href = '/login'; }
     })();
   </script>
+
 </body>
 </html>
