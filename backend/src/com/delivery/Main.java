@@ -3,6 +3,7 @@ package com.delivery;
 import com.delivery.controllers.AdminController;
 import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
+import com.delivery.controllers.InventoryController;
 import com.delivery.util.EnvLoader;
 import com.delivery.util.Result;
 import com.delivery.util.StaticFileHandler;
@@ -109,12 +110,35 @@ public class Main {
             }
         });
 
+        // Inventory endpoints - require SECRET clearance (manager or admin)
+        server.createContext("/api/inventory", (exchange) -> {
+            String path = exchange.getRequestURI().getPath();
+
+            if (path.equals("/api/inventory")) {
+                // GET /api/inventory - Get all inventory
+                InventoryController.handleGetAllInventory(exchange);
+            } else if (path.startsWith("/api/inventory/facility/")) {
+                // GET /api/inventory/facility/:id - Get inventory for specific facility
+                InventoryController.handleGetInventoryByFacility(exchange);
+            } else if (path.startsWith("/api/inventory/search/")) {
+                // GET /api/inventory/search/:trackingNumber - Search by tracking number
+                InventoryController.handleSearchInventory(exchange);
+            } else {
+                exchange.sendResponseHeaders(404, -1);
+            }
+        });
+
+        // Facilities endpoint - require CONFIDENTIAL clearance (driver or above)
+        server.createContext("/api/facilities", InventoryController::handleGetFacilities);
+
         // Determine frontend directory path - go up from backend to find frontend
         String backendDir = Paths.get("").toAbsolutePath().toString();
         String frontendPath;
-        if (backendDir.endsWith("backend")) {
-            // Running from backend directory
-            frontendPath = Paths.get(backendDir).getParent().resolve("frontend").toString();
+        if (backendDir.contains("backend")) {
+            // Running from backend directory or subdirectory (e.g., backend/src)
+            // Navigate up to project root by removing everything from "backend" onwards
+            String projectRoot = backendDir.substring(0, backendDir.indexOf("backend"));
+            frontendPath = Paths.get(projectRoot, "frontend").toString();
         } else {
             // Running from project root
             frontendPath = Paths.get(backendDir, "frontend").toString();
@@ -138,13 +162,17 @@ public class Main {
         System.out.println("  http://localhost:" + port + "/");
         System.out.println("");
         System.out.println("API endpoints:");
-        System.out.println("  POST /login                      - User authentication");
-        System.out.println("  POST /customer/register          - Customer registration");
-        System.out.println("  GET  /whoami                     - Check session status");
-        System.out.println("  GET  /admin/logs                 - View audit logs (Admin only)");
-        System.out.println("  GET  /admin/users                - List all users (Admin only)");
-        System.out.println("  PUT  /admin/users/:id/role       - Update user role (Admin only)");
-        System.out.println("  PUT  /admin/users/:id/status     - Update account status (Admin only)");
+        System.out.println("  POST /api/login                        - User authentication");
+        System.out.println("  POST /api/customer/register            - Customer registration");
+        System.out.println("  GET  /whoami                           - Check session status");
+        System.out.println("  GET  /admin/logs                       - View audit logs (Admin only)");
+        System.out.println("  GET  /admin/users                      - List all users (Admin only)");
+        System.out.println("  PUT  /admin/users/:id/role             - Update user role (Admin only)");
+        System.out.println("  PUT  /admin/users/:id/status           - Update account status (Admin only)");
+        System.out.println("  GET  /api/inventory                    - Get all inventory (Manager+)");
+        System.out.println("  GET  /api/inventory/facility/:id       - Get facility inventory (Manager+)");
+        System.out.println("  GET  /api/inventory/search/:tracking   - Search by tracking number (Manager+)");
+        System.out.println("  GET  /api/facilities                   - Get all facilities (Driver+)");
         System.out.println("");
         System.out.println("Test credentials:");
         System.out.println("  customer1 / cust123   (Clearance: 0)");

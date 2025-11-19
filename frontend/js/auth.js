@@ -55,12 +55,12 @@ class AuthHandler {
         this.setLoading(true);
 
         try {
-            // Send login request to backend server
-            const response = await fetch('http://localhost:8081/login', {
+            const response = await fetch('http://localhost:8081/api/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify(credentials)
             });
 

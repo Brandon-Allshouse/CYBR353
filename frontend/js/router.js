@@ -1,8 +1,7 @@
 // router.js - Dynamic routing system for the delivery application
 class Router {
     constructor() {
-        // Calculate base path from initial page load (before any pushState)
-        this.basePath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+        this.basePath = window.location.origin + '/';
 
         this.routes = {
             // Customer routes
