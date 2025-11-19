@@ -102,9 +102,66 @@ class Router {
 
     async loadContent(file) {
         try {
-            // For cleaner navigation with proper CSS/JS loading, use full page loads
-            // This avoids DOM manipulation issues and ensures styles load correctly
-            window.location.href = '/' + file;
+            const absolutePath = this.basePath + file;
+
+            const response = await fetch(absolutePath, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`Failed to load ${file}`);
+            }
+
+            const html = await response.text();
+
+            // Parse HTML and extract body content
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const content = doc.body.innerHTML;
+
+            // Get stylesheets from new page
+            const stylesheets = Array.from(doc.querySelectorAll('link[rel="stylesheet"]'))
+                .map(link => link.href);
+
+
+            // Get scripts from new page (exclude router.js since it's already loaded)
+            const scripts = Array.from(doc.querySelectorAll('script'))
+                .map(s => ({ src: s.src, content: s.textContent }))
+                .filter(s => !(s.src && s.src.includes('router.js')));
+
+            // Remove old page-specific stylesheets (keep global styles.css)
+            Array.from(document.querySelectorAll('link[rel="stylesheet"]')).forEach(link => {
+                if (!link.href.includes('main.css') ) {
+                    link.remove();
+                }
+            });
+
+            // Add new stylesheets
+            stylesheets.forEach(href => {
+                if (!document.querySelector(`link[href="${href}"]`)) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = href;
+                    document.head.appendChild(link);
+                }
+            });
+
+            // Update the main content area
+            document.body.innerHTML = content;
+
+            // Reload scripts for the new page with slight delay to ensure DOM is ready
+            setTimeout(() => {
+                scripts.forEach(scriptData => {
+                    const script = document.createElement('script');
+                    if (scriptData.src) {
+                        script.src = scriptData.src;
+                    } else if (scriptData.content) {
+                        script.textContent = scriptData.content;
+                    }
+                    document.body.appendChild(script);
+                });
+            }, 10);
+
+            // Re-initialize router listeners
+            this.init();
+
         } catch (error) {
             console.error('Routing error:', error);
             this.showError('Failed to load page');

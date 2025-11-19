@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inventory - Delivery System</title>
-  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
+  <h2>View Inventory</h2>
   <nav class="navbar">
     <div class="nav-container">
       <h1 class="logo">Delivery Management</h1>
@@ -42,8 +43,8 @@
     <p><a href="#" data-route="/management/dashboard">Back to Management Dashboard</a></p>
   </div>
 
-  <script src="/js/router.js"></script>
-  <script src="/js/management.js"></script>
+  <script src="../js/router.js"></script>
+  <script src="../js/management.js"></script>
   <script>
     // Access control: only allow managers
     (function(){
@@ -54,5 +55,19 @@
     })();
   </script>
 
-</body>
-</html>
+
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery Management</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/management/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/assign-routes">Assign Routes</a></li>
+        <li><a href="#" class="nav-link" data-route="/management/transfer">Transfer Portal</a></li>
+        <li><a href="#" class="nav-link active" data-route="/management/inventory">View Inventory</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>View Inventory</h2>

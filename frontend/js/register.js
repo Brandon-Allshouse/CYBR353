@@ -72,7 +72,7 @@ class RegistrationHandler {
 
         try {
             // Send registration request to backend
-            const response = await fetch('http://localhost:8081/api/customer/register', {
+            const response = await fetch('http://localhost:8081/customer/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="/css/main.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
   <nav class="navbar">
@@ -19,6 +19,8 @@
   </nav>
 
   <div class="container">
+    <h2>Admin Dashboard</h2>
+
     <section class="cards">
       <div class="card">
         <h3>System Health</h3>
@@ -61,7 +63,7 @@
       </div>
     </div>
 
-    <section>
+    <section class="section">
       <h3>Recent Audit Logs</h3>
       <div class="table-container">
         <table>
@@ -81,7 +83,7 @@
     </section>
   </div>
 
-  <script src="/js/router.js"></script>
+  <script src="../js/router.js"></script>
   <script src="../admin/js/admin.js"></script>
   <script>
     // Access control: only allow admins
@@ -89,7 +91,16 @@
       const allowed = ['admin'];
       const raw = sessionStorage.getItem('user');
       if (!raw) { window.location.href = '/login'; return; }
-      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+      try {
+        const u = JSON.parse(raw);
+        const role = (u.role || '').toString().toLowerCase();
+        if (!allowed.includes(role)) {
+          alert('Access denied');
+          const dest = (role === 'manager') ? 'management' : role;
+          if (dest) window.location.href = `/${dest}/dashboard`;
+          else window.location.href = '/login';
+        }
+      } catch(e){ window.location.href = '/login'; }
     })();
   </script>
 </body>

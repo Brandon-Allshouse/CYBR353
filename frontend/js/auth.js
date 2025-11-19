@@ -56,7 +56,7 @@ class AuthHandler {
 
         try {
             // Send login request to backend server
-            const response = await fetch('http://localhost:8081/api/login', {
+            const response = await fetch('http://localhost:8081/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
