@@ -5,6 +5,7 @@ import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
 import com.delivery.util.EnvLoader;
 import com.delivery.util.Result;
+import com.delivery.util.StaticFileHandler;
 import com.delivery.security.SecurityManager.AuditLogger;
 import com.delivery.session.SessionManager;
 
@@ -12,6 +13,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Paths;
 import java.util.concurrent.Executors;
 
 public class Main {
@@ -26,12 +28,13 @@ public class Main {
 
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-        server.createContext("/login", (exchange) -> {
+        // API endpoint for login (POST requests)
+        server.createContext("/api/login", (exchange) -> {
             AuthenticationController.handleLogin(exchange);
         });
 
         // Customer registration endpoint - Use Case 1: Create new customer account
-        server.createContext("/customer/register", (exchange) -> {
+        server.createContext("/api/customer/register", (exchange) -> {
             CustomerController.handleRegistration(exchange);
         });
 
@@ -106,6 +109,21 @@ public class Main {
             }
         });
 
+        // Determine frontend directory path - go up from backend to find frontend
+        String backendDir = Paths.get("").toAbsolutePath().toString();
+        String frontendPath;
+        if (backendDir.endsWith("backend")) {
+            // Running from backend directory
+            frontendPath = Paths.get(backendDir).getParent().resolve("frontend").toString();
+        } else {
+            // Running from project root
+            frontendPath = Paths.get(backendDir, "frontend").toString();
+        }
+
+        // Static file handler - serves HTML, CSS, JS files from frontend directory
+        // This must be registered LAST as it's a catch-all for unmatched routes
+        server.createContext("/", new StaticFileHandler(frontendPath));
+
         // Thread pool sized for moderate concurrent load - adjust based on production needs
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
@@ -114,8 +132,12 @@ public class Main {
         System.out.println("Delivery System Server Started!");
         System.out.println("========================================");
         System.out.println("Server listening on: http://localhost:" + port);
+        System.out.println("Frontend directory: " + frontendPath);
         System.out.println("");
-        System.out.println("Available endpoints:");
+        System.out.println("Web Interface:");
+        System.out.println("  http://localhost:" + port + "/");
+        System.out.println("");
+        System.out.println("API endpoints:");
         System.out.println("  POST /login                      - User authentication");
         System.out.println("  POST /customer/register          - Customer registration");
         System.out.println("  GET  /whoami                     - Check session status");

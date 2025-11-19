@@ -37,4 +37,5 @@ C:\Users\dawso\git\Optimized-Delivery-System\backend\src\com\delivery\util\Packa
 C:\Users\dawso\git\Optimized-Delivery-System\backend\src\com\delivery\util\PasswordUtil.java
 C:\Users\dawso\git\Optimized-Delivery-System\backend\src\com\delivery\util\Result.java
 C:\Users\dawso\git\Optimized-Delivery-System\backend\src\com\delivery\util\Route.java
+C:\Users\dawso\git\Optimized-Delivery-System\backend\src\com\delivery\util\StaticFileHandler.java
 C:\Users\dawso\git\Optimized-Delivery-System\backend\src\com\delivery\util\ValidationResult.java

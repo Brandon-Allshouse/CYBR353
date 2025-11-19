@@ -127,6 +127,13 @@ h3 {
 }
 
 /* Cards */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
 .card {
     background: white;
     padding: 2rem;
