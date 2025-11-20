@@ -1,6 +1,7 @@
 package com.delivery;
 
 import com.delivery.controllers.AdminController;
+import com.delivery.controllers.OrdersController;
 import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
 import com.delivery.controllers.InventoryController;
@@ -143,6 +144,21 @@ public class Main {
             // Running from project root
             frontendPath = Paths.get(backendDir, "frontend").toString();
         }
+
+        // Order endpoints
+        server.createContext("/api/order", (exchange) -> {
+            String path = exchange.getRequestURI().getPath();
+
+            if (path.equals("/api/order/place/")) {
+                // POST /api/order/place - Place an order
+                OrdersController.handleCreateOrder(exchange);
+            } else if (path.startsWith("/api/order/get/")) {
+                // GET /api/order/get/:id - Get order by ID
+                OrdersController.handleGetOrder(exchange);
+            } else {
+                exchange.sendResponseHeaders(404, -1);
+            }
+        });
 
         // Static file handler - serves HTML, CSS, JS files from frontend directory
         // This must be registered LAST as it's a catch-all for unmatched routes
