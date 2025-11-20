@@ -153,7 +153,7 @@ public class Main {
 
             if (path.equals("/api/order/place/")) {
                 // POST /api/order/place - Place an order
-                OrdersController.handleCreateOrder(exchange);
+                PackageController.handleCreatePackage(exchange);
             } else if (path.startsWith("/api/order/get/")) {
                 // GET /api/order/get/:id - Get order by ID
                 OrdersController.handleGetOrder(exchange);
