@@ -75,16 +75,16 @@ public class CustomerController {
         String email = parsed.get("email");
         String phone = parsed.get("phone");
         String password = parsed.get("password");
-        String recaptchaToken = parsed.get("recaptchaToken");
+        // String recaptchaToken = parsed.get("recaptchaToken");
 
-        // Verify reCAPTCHA (bot protection)
-        SecurityManager.Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
-        if (recaptchaResult.isErr()) {
-            AuditLogger.log(null, email, "REGISTRATION_ATTEMPT", "denied", clientIp,
-                "reCAPTCHA verification failed");
-            respondJson(exchange, 400, "{\"error\":\"" + recaptchaResult.unwrapErr() + "\"}");
-            return;
-        }
+        // Verify reCAPTCHA (bot protection) - DISABLED
+        // SecurityManager.Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
+        // if (recaptchaResult.isErr()) {
+        //     AuditLogger.log(null, email, "REGISTRATION_ATTEMPT", "denied", clientIp,
+        //         "reCAPTCHA verification failed");
+        //     respondJson(exchange, 400, "{\"error\":\"" + recaptchaResult.unwrapErr() + "\"}");
+        //     return;
+        // }
 
         // Validate all inputs using existing validators
         ValidationResult validation = InputValidator.validateRegistration(name, email, phone, password);

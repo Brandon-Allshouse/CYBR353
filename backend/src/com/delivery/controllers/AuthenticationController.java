@@ -51,7 +51,7 @@ public class AuthenticationController {
         Map<String, String> parsed = parseJson(body);
         String username = parsed.get("username");
         String password = parsed.get("password");
-        String recaptchaToken = parsed.get("recaptchaToken");
+        // String recaptchaToken = parsed.get("recaptchaToken");
 
         if (username == null || password == null) {
             AuditLogger.log(null, username == null ? "<unknown>" : username, "LOGIN", "error", clientIp, "Missing credentials");
@@ -59,13 +59,13 @@ public class AuthenticationController {
             return;
         }
 
-        // Verify reCAPTCHA (bot protection)
-        SecurityManager.Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
-        if (recaptchaResult.isErr()) {
-            AuditLogger.log(null, username, "LOGIN", "denied", clientIp, "reCAPTCHA verification failed");
-            respondJson(exchange, 400, "{\"message\":\"" + recaptchaResult.unwrapErr() + "\"}");
-            return;
-        }
+        // Verify reCAPTCHA (bot protection) - DISABLED
+        // SecurityManager.Result<Boolean, String> recaptchaResult = RecaptchaVerifier.verifyRecaptcha(recaptchaToken, clientIp);
+        // if (recaptchaResult.isErr()) {
+        //     AuditLogger.log(null, username, "LOGIN", "denied", clientIp, "reCAPTCHA verification failed");
+        //     respondJson(exchange, 400, "{\"message\":\"" + recaptchaResult.unwrapErr() + "\"}");
+        //     return;
+        // }
 
         // Check if account is locked due to too many failed login attempts
         SecurityManager.Result<Boolean, String> lockoutResult = LoginLockout.isAccountLocked(username, clientIp);
