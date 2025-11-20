@@ -51,7 +51,7 @@
         <label for="returnReason">Reason for Return</label>
         <textarea id="returnReason" rows="3" required></textarea>
       </div>
-      <button type="submit" class="btn">Request Return</button>
+      <button onclick="placeOrder(document.getElementById('returnTracking').value, document.getElementById('returnReason').value)" class="btn">Request Return</button>
     </form>
 
     <p><a href="#" data-route="/customer/dashboard">Back to Customer Dashboard</a></p>

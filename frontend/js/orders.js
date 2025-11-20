@@ -53,10 +53,10 @@ function addReturnablePackage(tracking, recipient, deliveredDate, status) {
 }
 
 
-export async function getOrderStatus(trackingNumber) {
+export async function getOrderStatus(orderId) {
     // TODO: implement frontend call to GET /orders/{id}
     const orderData = {
-        trackingNumber: trackingNumber
+        orderId: orderId
     };
     try {
         const response = await fetch('http://localhost:8081/api/order/get/', {

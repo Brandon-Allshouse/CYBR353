@@ -2,6 +2,7 @@ package com.delivery;
 
 import com.delivery.controllers.AdminController;
 import com.delivery.controllers.OrdersController;
+import com.delivery.controllers.PackageController;
 import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
 import com.delivery.controllers.InventoryController;
@@ -183,6 +184,10 @@ public class Main {
             }
         });
 
+        server.createContext("/api/trackPackages", (exchange) -> {
+            PackageController.handleTrackPackage(exchange);
+        });
+
         // Static file handler - serves HTML, CSS, JS files from frontend directory
         // This must be registered LAST as it's a catch-all for unmatched routes
         server.createContext("/", new StaticFileHandler(frontendPath));
@@ -212,6 +217,7 @@ public class Main {
         System.out.println("  GET  /api/inventory/facility/:id       - Get facility inventory (Manager+)");
         System.out.println("  GET  /api/inventory/search/:tracking   - Search by tracking number (Manager+)");
         System.out.println("  GET  /api/facilities                   - Get all facilities (Driver+)");
+        System.out.println("  GET  /api/trackPackages                - Get Package tracking information (Customer+)");
         System.out.println("");
         System.out.println("Test credentials:");
         System.out.println("  customer1 / cust123   (Clearance: 0)");
