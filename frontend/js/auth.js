@@ -37,18 +37,10 @@ class AuthHandler {
             return;
         }
 
-        // Verify reCAPTCHA
-        const recaptchaResponse = grecaptcha.getResponse();
-        if (!recaptchaResponse) {
-            this.showFieldError('recaptcha', 'Please complete the reCAPTCHA verification');
-            return;
-        }
-
         // Get form data
         const credentials = {
             username: this.usernameInput.value.trim(),
-            password: this.passwordInput.value,
-            recaptchaToken: recaptchaResponse
+            password: this.passwordInput.value
         };
 
         // Show loading state
@@ -88,12 +80,10 @@ class AuthHandler {
             } else {
                 // Show error message
                 this.showError(data.message || 'Invalid username or password');
-                grecaptcha.reset();
             }
         } catch (error) {
             console.error('Login error:', error);
             this.showError('Unable to connect to server. Please try again.');
-            grecaptcha.reset();
         } finally {
             this.setLoading(false);
         }
@@ -148,7 +138,6 @@ class AuthHandler {
         this.errorDisplay.classList.remove('show');
         this.clearFieldError('username');
         this.clearFieldError('password');
-        this.clearFieldError('recaptcha');
     }
 
     showError(message) {

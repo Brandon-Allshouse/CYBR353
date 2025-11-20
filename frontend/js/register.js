@@ -51,20 +51,12 @@ class RegistrationHandler {
             return;
         }
 
-        // Get reCAPTCHA token
-        const recaptchaResponse = grecaptcha.getResponse();
-        if (!recaptchaResponse) {
-            this.showFieldError('recaptcha', 'Please complete the reCAPTCHA verification');
-            return;
-        }
-
         // Get form data
         const registrationData = {
             name: this.nameInput.value.trim(),
             email: this.emailInput.value.trim(),
             phone: this.phoneInput.value.trim(),
-            password: this.passwordInput.value,
-            recaptchaToken: recaptchaResponse
+            password: this.passwordInput.value
         };
 
         // Show loading state
@@ -88,7 +80,6 @@ class RegistrationHandler {
 
                 // Reset form
                 this.form.reset();
-                grecaptcha.reset();
 
                 // Redirect to login after 2 seconds
                 setTimeout(() => {
@@ -101,12 +92,10 @@ class RegistrationHandler {
             } else {
                 // Registration failed
                 this.showError(data.error || 'Registration failed. Please try again.');
-                grecaptcha.reset();
             }
         } catch (error) {
             console.error('Registration error:', error);
             this.showError('Unable to connect to server. Please try again.');
-            grecaptcha.reset();
         } finally {
             this.setLoading(false);
         }
@@ -209,7 +198,6 @@ class RegistrationHandler {
         this.clearFieldError('phone');
         this.clearFieldError('password');
         this.clearFieldError('confirmPassword');
-        this.clearFieldError('recaptcha');
     }
 
     showError(message) {
