@@ -30,10 +30,8 @@ public class StaticFileHandler implements HttpHandler {
             requestPath = "/login.html";
         }
 
-        // Remove leading slash for file path construction
+        // Handle SPA routing - if route doesn't exist, redirect to appropriate dashboard
         String filePath = requestPath.startsWith("/") ? requestPath.substring(1) : requestPath;
-
-        // Construct full file path
         Path path = Paths.get(frontendPath, filePath);
         File file = path.toFile();
 
@@ -43,10 +41,24 @@ public class StaticFileHandler implements HttpHandler {
             return;
         }
 
-        // Check if file exists and is readable
+        // If file doesn't exist, handle SPA routing
         if (!file.exists() || !file.isFile()) {
-            sendResponse(exchange, 404, "File not found: " + requestPath);
-            return;
+            String spaRedirect = handleSPARoute(requestPath);
+            if (spaRedirect != null) {
+                // Redirect to the appropriate dashboard HTML file
+                filePath = spaRedirect.startsWith("/") ? spaRedirect.substring(1) : spaRedirect;
+                path = Paths.get(frontendPath, filePath);
+                file = path.toFile();
+
+                // Check if redirect target exists
+                if (!file.exists() || !file.isFile()) {
+                    sendResponse(exchange, 404, "File not found: " + requestPath);
+                    return;
+                }
+            } else {
+                sendResponse(exchange, 404, "File not found: " + requestPath);
+                return;
+            }
         }
 
         try {
@@ -70,6 +82,35 @@ public class StaticFileHandler implements HttpHandler {
         } catch (IOException e) {
             sendResponse(exchange, 500, "Internal server error: " + e.getMessage());
         }
+    }
+
+    /**
+     * Handle SPA routing by mapping virtual routes to actual HTML files
+     * Returns the file path to serve, or null if route is not recognized
+     */
+    private String handleSPARoute(String requestPath) {
+        // Management routes
+        if (requestPath.startsWith("/management/")) {
+            return "/management/management-dashboard.html";
+        }
+
+        // Customer routes
+        if (requestPath.startsWith("/customer/")) {
+            return "/customer/customer-dashboard.html";
+        }
+
+        // Driver routes
+        if (requestPath.startsWith("/driver/")) {
+            return "/driver/driver-dashboard.html";
+        }
+
+        // Admin routes
+        if (requestPath.startsWith("/admin/")) {
+            return "/admin/admin-dashboard.html";
+        }
+
+        // No matching SPA route
+        return null;
     }
 
     private String getContentType(String filePath) {

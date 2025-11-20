@@ -7,6 +7,8 @@ import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
 import com.delivery.controllers.InventoryController;
 import com.delivery.controllers.TransferController;
+import com.delivery.controllers.DriverController;
+import com.delivery.controllers.ManagementController;
 import com.delivery.util.EnvLoader;
 import com.delivery.util.Result;
 import com.delivery.util.StaticFileHandler;
@@ -188,6 +190,29 @@ public class Main {
             PackageController.handleTrackPackage(exchange);
         });
 
+        // Package management endpoints
+        server.createContext("/api/package/edit", (exchange) -> {
+            PackageController.handleEditPackage(exchange);
+        });
+
+        // Driver endpoints - require CONFIDENTIAL clearance (driver role)
+        server.createContext("/api/driver/route", (exchange) -> {
+            DriverController.handleGetRoute(exchange);
+        });
+
+        server.createContext("/api/driver/status", (exchange) -> {
+            DriverController.handleUpdateDeliveryStatus(exchange);
+        });
+
+        // Management endpoints - require SECRET clearance (manager or admin)
+        server.createContext("/api/management/assign-routes", (exchange) -> {
+            ManagementController.handleAssignRoutes(exchange);
+        });
+
+        server.createContext("/api/management/inventory-report", (exchange) -> {
+            ManagementController.handleInventoryReport(exchange);
+        });
+
         // Static file handler - serves HTML, CSS, JS files from frontend directory
         // This must be registered LAST as it's a catch-all for unmatched routes
         server.createContext("/", new StaticFileHandler(frontendPath));
@@ -218,6 +243,15 @@ public class Main {
         System.out.println("  GET  /api/inventory/search/:tracking   - Search by tracking number (Manager+)");
         System.out.println("  GET  /api/facilities                   - Get all facilities (Driver+)");
         System.out.println("  GET  /api/trackPackages                - Get Package tracking information (Customer+)");
+        System.out.println("  POST /api/package/edit                 - Edit package details (Manager+)");
+        System.out.println("  GET  /api/driver/route                 - Get driver's assigned route (Driver)");
+        System.out.println("  POST /api/driver/status                - Update delivery status (Driver)");
+        System.out.println("  POST /api/management/assign-routes     - Assign routes to drivers (Manager+)");
+        System.out.println("  GET  /api/management/inventory-report  - Get inventory reports (Manager+)");
+        System.out.println("  POST /api/transfers/initiate           - Initiate facility transfer (Manager+)");
+        System.out.println("  PUT  /api/transfers/complete/:id       - Complete transfer (Manager+)");
+        System.out.println("  GET  /api/transfers/pending            - List pending transfers (Manager+)");
+        System.out.println("  GET  /api/transfers/tracking/:num      - Get transfer by tracking (Manager+)");
         System.out.println("");
         System.out.println("Test credentials:");
         System.out.println("  customer1 / cust123   (Clearance: 0)");
