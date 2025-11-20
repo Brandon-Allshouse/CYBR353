@@ -72,6 +72,258 @@
       if (!raw) { window.location.href = '/login'; return; }
       try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
     })();
+
+    // Transfer Portal Functionality
+    const API_BASE = 'http://localhost:8081';
+
+    // Load facilities and pending transfers on page load
+    (async function() {
+      await loadFacilities();
+      await loadPendingTransfers();
+    })();
+
+    let facilities = [];
+    let inventory = [];
+
+    // Load facilities from API
+    async function loadFacilities() {
+      try {
+        const response = await fetch(`${API_BASE}/api/facilities`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          console.error('Failed to load facilities');
+          return;
+        }
+
+        const data = await response.json();
+        facilities = data.facilities || [];
+
+        // Update form dropdowns
+        updateFacilityDropdowns();
+      } catch (error) {
+        console.error('Error loading facilities:', error);
+      }
+    }
+
+    // Load current inventory to get package details
+    async function loadInventory() {
+      try {
+        const response = await fetch(`${API_BASE}/api/inventory`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          console.error('Failed to load inventory');
+          return;
+        }
+
+        const data = await response.json();
+        inventory = data.inventory || [];
+      } catch (error) {
+        console.error('Error loading inventory:', error);
+      }
+    }
+
+    // Update facility dropdowns
+    function updateFacilityDropdowns() {
+      const fromFacility = document.getElementById('fromFacility');
+      const toFacility = document.getElementById('toFacility');
+
+      // Replace text inputs with select dropdowns
+      fromFacility.outerHTML = '<select id="fromFacility" required></select>';
+      toFacility.outerHTML = '<select id="toFacility" required></select>';
+
+      const fromSelect = document.getElementById('fromFacility');
+      const toSelect = document.getElementById('toFacility');
+
+      // Add default options
+      fromSelect.innerHTML = '<option value="">Select source facility...</option>';
+      toSelect.innerHTML = '<option value="">Select destination facility...</option>';
+
+      // Populate with facilities
+      facilities.forEach(facility => {
+        const option1 = document.createElement('option');
+        option1.value = facility.facilityId;
+        option1.textContent = facility.facilityName;
+        fromSelect.appendChild(option1);
+
+        const option2 = document.createElement('option');
+        option2.value = facility.facilityId;
+        option2.textContent = facility.facilityName;
+        toSelect.appendChild(option2);
+      });
+    }
+
+    // Load pending transfers
+    async function loadPendingTransfers() {
+      try {
+        const response = await fetch(`${API_BASE}/api/transfers/pending`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          if (response.status === 403) {
+            document.getElementById('activeTransfersTable').innerHTML =
+              '<tr><td colspan="5" class="no-data">Access denied - insufficient clearance</td></tr>';
+            return;
+          }
+          throw new Error('Failed to load transfers');
+        }
+
+        const data = await response.json();
+        displayTransfers(data.transfers || []);
+      } catch (error) {
+        console.error('Error loading transfers:', error);
+        document.getElementById('activeTransfersTable').innerHTML =
+          '<tr><td colspan="5" class="no-data">Error loading transfers</td></tr>';
+      }
+    }
+
+    // Display transfers in table
+    function displayTransfers(transfers) {
+      const tbody = document.getElementById('activeTransfersTable');
+
+      if (transfers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">No active transfers.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = transfers.map(transfer => `
+        <tr>
+          <td>${transfer.transferId}</td>
+          <td>${transfer.fromFacility}</td>
+          <td>${transfer.toFacility}</td>
+          <td>${transfer.trackingNumber}</td>
+          <td>
+            <span class="badge badge-${transfer.status}">${transfer.status}</span>
+            ${transfer.status === 'pending' ?
+              `<button class="btn-sm" onclick="completeTransfer(${transfer.transferId})">Complete</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Handle form submission
+    document.getElementById('transferForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const fromFacilityId = parseInt(document.getElementById('fromFacility').value);
+      const toFacilityId = parseInt(document.getElementById('toFacility').value);
+      const trackingNumbers = document.getElementById('transferItems').value
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+
+      if (!fromFacilityId || !toFacilityId) {
+        alert('Please select both source and destination facilities');
+        return;
+      }
+
+      if (trackingNumbers.length === 0) {
+        alert('Please enter at least one tracking number');
+        return;
+      }
+
+      if (fromFacilityId === toFacilityId) {
+        alert('Source and destination facilities must be different');
+        return;
+      }
+
+      // Load inventory if not already loaded
+      if (inventory.length === 0) {
+        await loadInventory();
+      }
+
+      // Process each tracking number
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const trackingNumber of trackingNumbers) {
+        // Find package ID from inventory
+        const packageItem = inventory.find(item =>
+          item.trackingNumber === trackingNumber &&
+          item.facilityId === fromFacilityId
+        );
+
+        if (!packageItem) {
+          alert(`Package ${trackingNumber} not found at source facility`);
+          errorCount++;
+          continue;
+        }
+
+        // Initiate transfer
+        try {
+          const response = await fetch(`${API_BASE}/api/transfers/initiate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              packageId: packageItem.packageId,
+              fromFacilityId: fromFacilityId,
+              toFacilityId: toFacilityId
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            alert(`Error transferring ${trackingNumber}: ${data.error}`);
+            errorCount++;
+          }
+        } catch (error) {
+          console.error('Error initiating transfer:', error);
+          alert(`Error transferring ${trackingNumber}: ${error.message}`);
+          errorCount++;
+        }
+      }
+
+      // Show summary
+      if (successCount > 0) {
+        alert(`Successfully initiated ${successCount} transfer(s)`);
+        // Reset form
+        document.getElementById('transferForm').reset();
+        // Reload transfers
+        await loadPendingTransfers();
+        // Reload inventory
+        inventory = [];
+      }
+
+      if (errorCount > 0) {
+        alert(`${errorCount} transfer(s) failed`);
+      }
+    });
+
+    // Complete a transfer
+    async function completeTransfer(transferId) {
+      if (!confirm('Are you sure you want to complete this transfer?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/transfers/complete/${transferId}`, {
+          method: 'PUT',
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert('Transfer completed successfully!');
+          await loadPendingTransfers();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Error completing transfer:', error);
+        alert(`Error completing transfer: ${error.message}`);
+      }
+    }
   </script>
 </body>
 </html>

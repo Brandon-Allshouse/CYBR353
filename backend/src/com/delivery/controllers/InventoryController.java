@@ -63,9 +63,9 @@ public class InventoryController {
             return;
         }
 
-        // Convert inventory items to JSON array
+        // Convert inventory items to JSON object with inventory array
         List<InventoryItem> items = inventoryResult.unwrap();
-        String json = inventoryListToJson(items);
+        String json = "{\"inventory\":" + inventoryListToJson(items) + "}";
 
         AuditLogger.log(null, session.username, "VIEW_INVENTORY", "success", clientIp,
                        "Retrieved " + items.size() + " inventory items");
@@ -191,9 +191,9 @@ public class InventoryController {
             return;
         }
 
-        // Convert facilities to JSON array
+        // Convert facilities to JSON object with facilities array
         List<Facility> facilities = facilitiesResult.unwrap();
-        String json = facilitiesListToJson(facilities);
+        String json = "{\"facilities\":" + facilitiesListToJson(facilities) + "}";
 
         AuditLogger.log(null, session.username, "VIEW_FACILITIES", "success", clientIp,
                        "Retrieved " + facilities.size() + " facilities");

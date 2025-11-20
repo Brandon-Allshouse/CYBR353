@@ -5,6 +5,7 @@ import com.delivery.controllers.OrdersController;
 import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
 import com.delivery.controllers.InventoryController;
+import com.delivery.controllers.TransferController;
 import com.delivery.util.EnvLoader;
 import com.delivery.util.Result;
 import com.delivery.util.StaticFileHandler;
@@ -155,6 +156,28 @@ public class Main {
             } else if (path.startsWith("/api/order/get/")) {
                 // GET /api/order/get/:id - Get order by ID
                 OrdersController.handleGetOrder(exchange);
+            } else {
+                exchange.sendResponseHeaders(404, -1);
+            }
+        });
+
+        // Transfer endpoints - require SECRET clearance (manager or admin)
+        // Use Case 6: Transfer packages between facilities
+        server.createContext("/api/transfers", (exchange) -> {
+            String path = exchange.getRequestURI().getPath();
+
+            if (path.equals("/api/transfers/initiate")) {
+                // POST /api/transfers/initiate - Initiate a facility transfer
+                TransferController.handleInitiateTransfer(exchange);
+            } else if (path.startsWith("/api/transfers/complete/")) {
+                // PUT /api/transfers/complete/:transferId - Complete a transfer
+                TransferController.handleCompleteTransfer(exchange);
+            } else if (path.equals("/api/transfers/pending")) {
+                // GET /api/transfers/pending - Get all pending transfers
+                TransferController.handleGetPendingTransfers(exchange);
+            } else if (path.startsWith("/api/transfers/tracking/")) {
+                // GET /api/transfers/tracking/:trackingNumber - Get transfer by tracking number
+                TransferController.handleGetTransferByTracking(exchange);
             } else {
                 exchange.sendResponseHeaders(404, -1);
             }

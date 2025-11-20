@@ -332,26 +332,50 @@ INSERT INTO facilities (facility_name, address, city, state, zip_code, phone, ca
 ('West Coast Hub', '456 Pacific Way', 'Los Angeles', 'CA', '90001', '(310) 555-2000', 35000),
 ('East Coast Hub', '789 Atlantic Ave', 'New York', 'NY', '10001', '(212) 555-3000', 40000);
 
--- Insert test addresses for customer1
+-- Insert test addresses
 INSERT INTO addresses (user_id, address_type, street_address, city, state, zip_code, delivery_instructions, is_default) VALUES
 (1, 'both', '100 Main St', 'Denver', 'CO', '80203', 'Leave at front door', TRUE),
-(1, 'delivery', '200 Oak Ave', 'Boulder', 'CO', '80301', 'Ring doorbell twice', FALSE);
+(1, 'delivery', '200 Oak Ave', 'Boulder', 'CO', '80301', 'Ring doorbell twice', FALSE),
+(1, 'delivery', '789 Elm St', 'Los Angeles', 'CA', '90012', 'Call on arrival', FALSE),
+(1, 'delivery', '456 Broadway', 'New York', 'NY', '10013', 'Doorman available', FALSE);
 
--- Insert test order for customer1
+-- Insert test orders
 INSERT INTO orders (customer_id, pickup_address_id, delivery_address_id, order_status, total_cost, payment_status, estimated_delivery) VALUES
-(1, 1, 2, 'pending', 25.99, 'pending', DATE_ADD(NOW(), INTERVAL 3 DAY));
+(1, 1, 2, 'pending', 25.99, 'pending', DATE_ADD(NOW(), INTERVAL 3 DAY)),
+(1, 1, 3, 'pending', 45.50, 'completed', DATE_ADD(NOW(), INTERVAL 5 DAY)),
+(1, 1, 4, 'pending', 15.75, 'completed', DATE_ADD(NOW(), INTERVAL 2 DAY)),
+(1, 1, 2, 'pending', 32.00, 'completed', DATE_ADD(NOW(), INTERVAL 4 DAY)),
+(1, 1, 3, 'pending', 28.25, 'pending', DATE_ADD(NOW(), INTERVAL 6 DAY));
 
--- Insert test package
+-- Insert test packages (distributed across facilities)
 INSERT INTO packages (order_id, tracking_number, current_facility_id, package_status, weight_kg, length_cm, width_cm, height_cm, fragile, signature_required) VALUES
-(1, 'PKG1234567890', 1, 'at_facility', 2.5, 30, 20, 15, FALSE, FALSE);
+(1, 'PKG1234567890', 1, 'at_facility', 2.5, 30, 20, 15, FALSE, FALSE),
+(2, 'PKG2345678901', 1, 'at_facility', 5.2, 40, 30, 25, TRUE, TRUE),
+(3, 'PKG3456789012', 2, 'at_facility', 1.8, 25, 15, 10, FALSE, FALSE),
+(4, 'PKG4567890123', 2, 'at_facility', 3.7, 35, 25, 20, FALSE, TRUE),
+(5, 'PKG5678901234', 3, 'at_facility', 4.1, 32, 22, 18, TRUE, FALSE),
+(1, 'PKG6789012345', 1, 'at_facility', 2.9, 28, 18, 12, FALSE, FALSE),
+(2, 'PKG7890123456', 3, 'at_facility', 6.3, 45, 35, 30, TRUE, TRUE);
 
--- Insert initial delivery status
+-- Insert delivery status history
 INSERT INTO delivery_status_history (package_id, status, location, updated_by, notes) VALUES
-(1, 'created', 'Main Distribution Center', NULL, 'Package created and received at facility');
+(1, 'created', 'Main Distribution Center', NULL, 'Package created'),
+(2, 'created', 'Main Distribution Center', NULL, 'Fragile package - handle with care'),
+(3, 'created', 'West Coast Hub', NULL, 'Package received at LA facility'),
+(4, 'created', 'West Coast Hub', NULL, 'Signature required on delivery'),
+(5, 'created', 'East Coast Hub', NULL, 'Package arrived at NYC'),
+(6, 'created', 'Main Distribution Center', NULL, 'Standard package'),
+(7, 'created', 'East Coast Hub', NULL, 'High-value fragile item');
 
--- Insert test inventory entry
+-- Insert inventory entries
 INSERT INTO inventory (facility_id, package_id, inventory_status) VALUES
-(1, 1, 'in_stock');
+(1, 1, 'in_stock'),
+(1, 2, 'in_stock'),
+(2, 3, 'in_stock'),
+(2, 4, 'in_stock'),
+(3, 5, 'in_stock'),
+(1, 6, 'in_stock'),
+(3, 7, 'in_stock');
 
 SELECT '============================================================' AS '';
 SELECT 'DATABASE CREATED SUCCESSFULLY' AS '';
