@@ -83,6 +83,30 @@ public class SecurityManager {
                     action, result, ipAddress == null ? "-" : ipAddress, details == null ? "" : details);
             logs.add(entry);
             System.out.println("AUDIT: " + entry);
+
+            // Write to database
+            com.delivery.util.Result<java.sql.Connection, String> connResult = com.delivery.database.DatabaseConnection.getConnection();
+            if (connResult.isOk()) {
+                try (java.sql.Connection conn = connResult.unwrap()) {
+                    String sql = "INSERT INTO audit_log (user_id, username, action, result, ip_address, details) VALUES (?, ?, ?, ?, ?, ?)";
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        if (userId != null) {
+                            stmt.setLong(1, userId);
+                        } else {
+                            stmt.setNull(1, java.sql.Types.BIGINT);
+                        }
+                        stmt.setString(2, username);
+                        stmt.setString(3, action);
+                        stmt.setString(4, result);
+                        stmt.setString(5, ipAddress);
+                        stmt.setString(6, details);
+                        stmt.executeUpdate();
+                    }
+                } catch (java.sql.SQLException e) {
+                    System.err.println("Failed to write audit log to database: " + e.getMessage());
+                }
+            }
+
             return Result.ok(null);
         }
 
