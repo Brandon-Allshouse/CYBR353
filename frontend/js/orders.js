@@ -1,10 +1,27 @@
 // orders.js - frontend interactions for placing orders
 
-export async function placeOrder(trackingNumber, reason) {
+async function placeOrder(event) {
     // TODO: implement frontend call to POST /orders
+    if (event) event.preventDefault();
+
+    alert('Placing order...');
+    const trackingNumber = document.getElementById('tracking').value;
+    const weight = parseFloat(document.getElementById('weight').value);
+    const length = parseFloat(document.getElementById('length').value);
+    const width = parseFloat(document.getElementById('width').value);
+    const height = parseFloat(document.getElementById('height').value);
+
+    if (!trackingNumber || isNaN(weight) || isNaN(length) || isNaN(width) || isNaN(height)) {
+        alert("Please fill out all fields correctly.");
+        return;
+    }
+
     const orderData = {
             trackingNumber: trackingNumber,
-            reason: reason
+            weight: weight,
+            length: length,
+            width: width,
+            height: height
         };
      try {
             const response = await fetch('http://localhost:8081/api/order/place/', {
@@ -18,10 +35,10 @@ export async function placeOrder(trackingNumber, reason) {
             const data = await response.json();
 
             if (response.ok) {
-                alert('Return request successful!');
-                addReturnablePackage(trackingNumber, "", "", "");
+                alert('Package created successfully!');
+                addPackageToTable()
             } else {
-                alert('Failed to request return. Please try again.');
+                alert('Failed to create package. Please try again.');
             }
         } catch (error) {
             alert(error);
@@ -30,30 +47,45 @@ export async function placeOrder(trackingNumber, reason) {
     console.log('placeOrder stub', orderData);
 }
 
-function addReturnablePackage(tracking, recipient, deliveredDate, status) {
-    const tbody = document.getElementById("returnablePackagesTable");
+function addPackageToTable(pkg) {
+    const table = document.getElementById("returnablePackagesTable");
 
-    // Remove "No eligible returns." row if it exists
-    const noDataRow = tbody.querySelector(".no-data");
-    if (noDataRow) {
-        noDataRow.remove();
+    // Clear “No packages” message
+    if (table.children.length === 1 &&
+        table.children[0].querySelector(".no-data")) {
+        table.innerHTML = "";
     }
 
-    // Create new row
+
     const row = document.createElement("tr");
+
     row.innerHTML = `
-        <td>${tracking}</td>
-        <td>${recipient}</td>
-        <td>${deliveredDate}</td>
-        <td>${status}</td>
-        <td><input type="checkbox" class="row-select"></td>
+        <td>
+            ${document.getElementById('tracking').value}
+        </td>
+        <td>
+            ${parseFloat(document.getElementById('weight').value)}
+        </td>
+        <td>
+            ${parseFloat(document.getElementById('length').value)}
+        </td>
+        <td>
+            ${parseFloat(document.getElementById('width').value)}
+        </td>
+        <td>
+            ${parseFloat(document.getElementById('height').value)}
+        </td>
+        <td>
+            Created
+        </td>
     `;
 
-    tbody.appendChild(row);
+    table.appendChild(row);
 }
 
 
-export async function getOrderStatus(orderId) {
+
+/*export async function getOrderStatus(orderId) {
     // TODO: implement frontend call to GET /orders/{id}
     const orderData = {
         orderId: orderId
@@ -79,4 +111,13 @@ export async function getOrderStatus(orderId) {
         console.error('Error retrieving order status:', error);
     }
     console.log('getOrderStatus stub', trackingNumber);
-}
+}*/
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("placeForm");
+
+    if (form) {
+        form.addEventListener("submit", placeOrder);
+    }
+});

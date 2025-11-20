@@ -248,6 +248,154 @@ public class PackageController {
         }
     }
 
+    // POST /package/create
+    public static void handleCreatePackage(HttpExchange exchange) throws IOException {
+        String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
+    
+        // CORS
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
+    
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+    
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(405, -1);
+            return;
+        }
+    
+        // Read JSON body
+        String body = readStream(exchange.getRequestBody());
+        Map<String, String> data = parseJson(body);
+    
+        String tracking = data.get("trackingNumber");
+        String weight = data.get("weight");
+        String length = data.get("length");
+        String width = data.get("width");
+        String height = data.get("height");
+    
+        // Validate required fields
+        if (tracking == null || weight == null || length == null || width == null || height == null) {
+            AuditLogger.log(null, null, "CREATE_PACKAGE", "denied", clientIp,
+                "Missing required fields");
+            respondJson(exchange, 400, "{\"error\":\"trackingNumber, weight, length, width, height required\"}");
+            return;
+        }
+    
+        // Sanitize
+        var tRes = InputSanitizer.sanitizeString(tracking);
+        var wRes = InputSanitizer.sanitizeString(weight);
+        var lRes = InputSanitizer.sanitizeString(length);
+        var wiRes = InputSanitizer.sanitizeString(width);
+        var hRes = InputSanitizer.sanitizeString(height);
+    
+        if (tRes.isErr() || wRes.isErr() || lRes.isErr() || wiRes.isErr() || hRes.isErr()) {
+            AuditLogger.log(null, null, "CREATE_PACKAGE", "error", clientIp,
+                "Sanitization failed");
+            respondJson(exchange, 400, "{\"error\":\"Invalid input format\"}");
+            return;
+        }
+    
+        String trackingNumber = tRes.unwrap();
+    
+        double weightKg;
+        double lengthCm;
+        double widthCm;
+        double heightCm;
+    
+        try {
+            weightKg = Double.parseDouble(wRes.unwrap());
+            lengthCm = Double.parseDouble(lRes.unwrap());
+            widthCm = Double.parseDouble(wiRes.unwrap());
+            heightCm = Double.parseDouble(hRes.unwrap());
+        } catch (NumberFormatException e) {
+            respondJson(exchange, 400, "{\"error\":\"Numeric fields must be valid numbers\"}");
+            return;
+        }
+    
+        // DB connection
+        Result<Connection, String> connRes = DatabaseConnection.getConnection();
+        if (connRes.isErr()) {
+            AuditLogger.log(null, null, "CREATE_PACKAGE", "error", clientIp,
+                "DB connection failed");
+            respondJson(exchange, 500, "{\"error\":\"Server error\"}");
+            return;
+        }
+    
+        Connection conn = connRes.unwrap();
+    
+        try {
+            conn.setAutoCommit(false);
+        
+            long packageId;
+        
+            // INSERT package
+            String insertPackage =
+                "INSERT INTO packages (order_id, tracking_number, package_status, weight_kg, length_cm, width_cm, height_cm) " +
+                "VALUES (1, ?, 'created', ?, ?, ?, ?)";
+        
+            try (PreparedStatement stmt = conn.prepareStatement(insertPackage, PreparedStatement.RETURN_GENERATED_KEYS)) {
+                stmt.setString(1, trackingNumber);
+                stmt.setDouble(2, weightKg);
+                stmt.setDouble(3, lengthCm);
+                stmt.setDouble(4, widthCm);
+                stmt.setDouble(5, heightCm);
+                stmt.executeUpdate();
+            
+                try (ResultSet keys = stmt.getGeneratedKeys()) {
+                    if (!keys.next()) {
+                        conn.rollback();
+                        respondJson(exchange, 500, "{\"error\":\"Failed to create package\"}");
+                        return;
+                    }
+                    packageId = keys.getLong(1);
+                }
+            }
+        
+            // INSERT initial status history
+            String hist =
+                "INSERT INTO delivery_status_history (package_id, status, location, notes) " +
+                "VALUES (?, 'created', 'Unknown Facility', 'Package created')";
+        
+            try (PreparedStatement h = conn.prepareStatement(hist)) {
+                h.setLong(1, packageId);
+                h.executeUpdate();
+            }
+        
+            conn.commit();
+        
+            AuditLogger.log(null, null, "CREATE_PACKAGE", "success", clientIp,
+                "Created package " + trackingNumber);
+        
+            // Build JSON response
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,");
+            json.append("\"package\":{");
+            json.append("\"packageId\":").append(packageId).append(",");
+            json.append("\"trackingNumber\":\"").append(escapeJson(trackingNumber)).append("\",");
+            json.append("\"status\":\"created\",");
+            json.append("\"weightKg\":").append(weightKg).append(",");
+            json.append("\"dimensions\":{");
+            json.append("\"lengthCm\":").append(lengthCm).append(",");
+            json.append("\"widthCm\":").append(widthCm).append(",");
+            json.append("\"heightCm\":").append(heightCm);
+            json.append("}}}");
+        
+            respondJson(exchange, 201, json.toString());
+        
+        } catch (SQLException e) {
+            try { conn.rollback(); } catch (Exception ignored) {}
+            respondJson(exchange, 500, "{\"error\":\"Database error\"}");
+            e.printStackTrace();
+        } finally {
+            try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+        }
+    }
+    
+    
     // POST /package/edit
     public static void handleEditPackage(HttpExchange exchange) throws IOException {
         String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();

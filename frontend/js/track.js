@@ -48,8 +48,8 @@ async function getTracking(event) {
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td>${now.toLocaleString()}</td>
-                <td>${data.package.currentFacility || "Unknown"}</td>
-                <td>${data.package.status || "Unknown"}</td>
+                <td>${data.package.currentFacility || ""}</td>
+                <td>${data.package.status || ""}</td>
                 <td>${data.package.notes || ""}</td>
             `;
 
