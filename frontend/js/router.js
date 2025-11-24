@@ -2,6 +2,9 @@
 class Router {
     constructor() {
         this.basePath = window.location.origin + '/';
+        this.initialized = false;
+        this.isLoadingContent = false;
+        this.lastContentLoadTime = 0;
 
         this.routes = {
             // Customer routes
@@ -54,14 +57,35 @@ class Router {
     }
 
     init() {
+        // Only initialize once to prevent duplicate event listeners
+        if (this.initialized) {
+            return;
+        }
+        this.initialized = true;
+
         // Handle navigation events
         window.addEventListener('popstate', () => this.handleRoute());
 
         // Intercept all anchor clicks for SPA-like navigation
         document.addEventListener('click', (e) => {
-            if (e.target.matches('[data-route]')) {
+            const timeSinceLoad = Date.now() - this.lastContentLoadTime;
+
+            // Ignore clicks while content is being loaded to prevent race conditions
+            if (this.isLoadingContent) {
                 e.preventDefault();
+                return;
+            }
+
+            if (e.target.matches('[data-route]')) {
                 const path = e.target.getAttribute('data-route');
+
+                // Block logout clicks within 500ms of page load (prevents phantom clicks)
+                if (path === '/logout' && timeSinceLoad < 500) {
+                    e.preventDefault();
+                    return;
+                }
+
+                e.preventDefault();
                 this.navigate(path);
             }
         });
@@ -117,6 +141,10 @@ class Router {
     }
 
     async loadContent(file) {
+        // Set flag to ignore clicks during content loading
+        this.isLoadingContent = true;
+        this.lastContentLoadTime = Date.now();
+
         try {
             const absolutePath = this.basePath + file;
 
@@ -137,10 +165,10 @@ class Router {
                 .map(link => link.href);
 
 
-            // Get scripts from new page (exclude router.js since it's already loaded)
+            // Get scripts from new page (exclude router.js and auth.js since they're already loaded)
             const scripts = Array.from(doc.querySelectorAll('script'))
                 .map(s => ({ src: s.src, content: s.textContent }))
-                .filter(s => !(s.src && s.src.includes('router.js')));
+                .filter(s => !(s.src && (s.src.includes('router.js') || s.src.includes('auth.js'))));
 
             // Remove old page-specific stylesheets (keep global styles.css)
             Array.from(document.querySelectorAll('link[rel="stylesheet"]')).forEach(link => {
@@ -173,6 +201,16 @@ class Router {
                     }
                     document.body.appendChild(script);
                 });
+
+                // Clear loading flag after scripts load and a small buffer
+                setTimeout(() => {
+                    this.isLoadingContent = false;
+
+                    // Re-initialize auth handler if login form is present
+                    if (typeof window.initAuthHandler === 'function') {
+                        window.initAuthHandler();
+                    }
+                }, 100);
             }, 10);
 
             // Re-initialize router listeners
@@ -181,6 +219,7 @@ class Router {
         } catch (error) {
             console.error('Routing error:', error);
             this.showError('Failed to load page');
+            this.isLoadingContent = false; // Clear flag on error
         }
     }
 

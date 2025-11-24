@@ -1,5 +1,7 @@
 // Auth.js - Authentication Handler
-class AuthHandler {
+// Use conditional declaration to allow script reloading
+if (typeof AuthHandler === 'undefined') {
+    window.AuthHandler = class {
     constructor() {
         this.form = document.getElementById('loginForm');
         this.usernameInput = document.getElementById('username');
@@ -8,7 +10,6 @@ class AuthHandler {
         this.errorDisplay = document.getElementById('errorDisplay');
 
         if (!this.form) {
-            console.error('Login form not found');
             return;
         }
 
@@ -65,6 +66,7 @@ class AuthHandler {
                 // Prefer role-based redirect (server returns role). Use SPA router when available.
                 const role = (data.role || data.clearanceLevel || '').toString().toLowerCase();
                 this.storeUserSession(Object.assign({}, data, { role }));
+
                 setTimeout(() => {
                     // map role -> route prefix (manager -> management)
                     const prefix = (role === 'manager') ? 'management' : role;
@@ -184,13 +186,20 @@ class AuthHandler {
             }
         }, 500);
     }
+};
 }
+
+// Global function to initialize auth handler (can be called multiple times)
+window.initAuthHandler = function() {
+    if (document.getElementById('loginForm')) {
+        new AuthHandler();
+    }
+};
 
 // Initialize auth handler when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new AuthHandler());
+    document.addEventListener('DOMContentLoaded', () => window.initAuthHandler());
 } else {
-    new AuthHandler();
-
+    window.initAuthHandler();
 }
 
