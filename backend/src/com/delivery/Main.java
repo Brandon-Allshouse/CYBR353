@@ -213,6 +213,10 @@ public class Main {
             ManagementController.handleInventoryReport(exchange);
         });
 
+        server.createContext("/api/management/drivers", (exchange) -> {
+            ManagementController.handleGetDrivers(exchange);
+        });
+
         // Static file handler - serves HTML, CSS, JS files from frontend directory
         // This must be registered LAST as it's a catch-all for unmatched routes
         server.createContext("/", new StaticFileHandler(frontendPath));

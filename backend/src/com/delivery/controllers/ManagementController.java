@@ -103,18 +103,23 @@ public class ManagementController {
 
         // Parse package IDs
         List<Long> packageIds = new ArrayList<>();
+        System.out.println("DEBUG: Received packageIdsStr = '" + packageIdsStr + "'");
         if (packageIdsStr != null && !packageIdsStr.trim().isEmpty()) {
             try {
                 for (String idStr : packageIdsStr.split(",")) {
-                    packageIds.add(Long.parseLong(idStr.trim()));
+                    Long id = Long.parseLong(idStr.trim());
+                    packageIds.add(id);
+                    System.out.println("DEBUG: Parsed package ID: " + id);
                 }
             } catch (NumberFormatException e) {
+                System.err.println("DEBUG: Failed to parse package IDs from: " + packageIdsStr);
                 AuditLogger.log(null, session.username, "ASSIGN_ROUTE", "denied", clientIp,
                     "Invalid package ID format");
                 respondJson(exchange, 400, "{\"error\":\"Invalid package ID format\"}");
                 return;
             }
         }
+        System.out.println("DEBUG: Total package IDs parsed: " + packageIds.size() + " - " + packageIds);
 
         // Sanitize string inputs
         SecurityManager.Result<String, String> routeNameResult = InputSanitizer.sanitizeString(routeName);
@@ -215,6 +220,17 @@ public class ManagementController {
 
                 // Add packages to route
                 if (!packageIds.isEmpty()) {
+                    // Update package status FIRST to avoid lock escalation with foreign key constraint
+                    // (route_packages has FK to packages, INSERT takes shared lock, UPDATE needs exclusive lock)
+                    String updatePackageQuery = "UPDATE packages SET package_status = 'out_for_delivery' WHERE package_id = ?";
+                    try (PreparedStatement updateStmt = conn.prepareStatement(updatePackageQuery)) {
+                        for (Long packageId : packageIds) {
+                            updateStmt.setLong(1, packageId);
+                            updateStmt.executeUpdate();
+                        }
+                    }
+
+                    // Now insert into route_packages
                     String routePackageQuery =
                         "INSERT INTO route_packages (route_id, package_id, stop_sequence) " +
                         "VALUES (?, ?, ?)";
@@ -225,15 +241,6 @@ public class ManagementController {
                             packageStmt.setLong(2, packageIds.get(i));
                             packageStmt.setInt(3, i + 1);
                             packageStmt.executeUpdate();
-                        }
-                    }
-
-                    // Update package status to out_for_delivery
-                    String updatePackageQuery = "UPDATE packages SET package_status = 'out_for_delivery' WHERE package_id = ?";
-                    try (PreparedStatement updateStmt = conn.prepareStatement(updatePackageQuery)) {
-                        for (Long packageId : packageIds) {
-                            updateStmt.setLong(1, packageId);
-                            updateStmt.executeUpdate();
                         }
                     }
                 }
@@ -590,7 +597,28 @@ public class ManagementController {
         s = s.trim();
         if (s.startsWith("{")) s = s.substring(1);
         if (s.endsWith("}")) s = s.substring(0, s.length()-1);
-        String[] parts = s.split(",");
+
+        // Split by comma but respect quoted strings
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '"') {
+                inQuotes = !inQuotes;
+                current.append(c);
+            } else if (c == ',' && !inQuotes) {
+                parts.add(current.toString());
+                current = new StringBuilder();
+            } else {
+                current.append(c);
+            }
+        }
+        if (current.length() > 0) {
+            parts.add(current.toString());
+        }
+
         for (String p : parts) {
             int idx = p.indexOf(":");
             if (idx <= 0) continue;
@@ -599,6 +627,115 @@ public class ManagementController {
             map.put(k, v);
         }
         return map;
+    }
+
+    // GET /api/management/drivers - Get all active drivers for route assignment
+    public static void handleGetDrivers(HttpExchange exchange) throws IOException {
+        String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
+
+        // CORS headers
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+
+        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(405, -1);
+            return;
+        }
+
+        // Get session token
+        String token = extractToken(exchange);
+
+        // Validate session
+        Result<SessionManager.Session, String> sessionResult = SessionManager.getSession(token);
+        if (sessionResult.isErr()) {
+            respondJson(exchange, 401, "{\"error\":\"Unauthorized - Please log in\"}");
+            return;
+        }
+
+        SessionManager.Session session = sessionResult.unwrap();
+
+        // Verify user has manager or admin role
+        if (!"manager".equals(session.role) && !"admin".equals(session.role)) {
+            AuditLogger.log(null, session.username, "GET_DRIVERS", "denied", clientIp,
+                "Access denied - requires manager role");
+            respondJson(exchange, 403, "{\"error\":\"Forbidden - Manager access required\"}");
+            return;
+        }
+
+        // Get database connection
+        Result<Connection, String> connResult = DatabaseConnection.getConnection();
+        if (connResult.isErr()) {
+            respondJson(exchange, 500, "{\"error\":\"Server error\"}");
+            return;
+        }
+
+        Connection conn = connResult.unwrap();
+
+        try {
+            // Query all active drivers
+            String query =
+                "SELECT user_id, username, full_name, email, phone " +
+                "FROM users " +
+                "WHERE role = 'driver' AND account_status = 'active' " +
+                "ORDER BY username";
+
+            List<Map<String, Object>> drivers = new ArrayList<>();
+
+            try (PreparedStatement stmt = conn.prepareStatement(query);
+                 ResultSet rs = stmt.executeQuery()) {
+
+                while (rs.next()) {
+                    Map<String, Object> driver = new HashMap<>();
+                    driver.put("user_id", rs.getLong("user_id"));
+                    driver.put("username", rs.getString("username"));
+                    driver.put("full_name", rs.getString("full_name"));
+                    driver.put("email", rs.getString("email"));
+                    driver.put("phone", rs.getString("phone"));
+                    drivers.add(driver);
+                }
+            }
+
+            AuditLogger.log(null, session.username, "GET_DRIVERS", "success", clientIp,
+                "Retrieved " + drivers.size() + " drivers");
+
+            // Build JSON response
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"drivers\":[");
+
+            for (int i = 0; i < drivers.size(); i++) {
+                Map<String, Object> driver = drivers.get(i);
+                if (i > 0) json.append(",");
+
+                json.append("{");
+                json.append("\"user_id\":").append(driver.get("user_id")).append(",");
+                json.append("\"username\":\"").append(escapeJson((String) driver.get("username"))).append("\",");
+                json.append("\"full_name\":\"").append(escapeJson((String) driver.get("full_name"))).append("\",");
+                json.append("\"email\":\"").append(escapeJson((String) driver.get("email"))).append("\",");
+                json.append("\"phone\":\"").append(escapeJson((String) driver.get("phone"))).append("\"");
+                json.append("}");
+            }
+
+            json.append("]}");
+
+            respondJson(exchange, 200, json.toString());
+
+        } catch (SQLException e) {
+            System.err.println("Database error: " + e.getMessage());
+            e.printStackTrace();
+            respondJson(exchange, 500, "{\"error\":\"Database error\"}");
+        } finally {
+            try {
+                conn.close();
+            } catch (SQLException e) {
+                System.err.println("Error closing connection: " + e.getMessage());
+            }
+        }
     }
 
     private static void respondJson(HttpExchange exchange, int code, String body) throws IOException {

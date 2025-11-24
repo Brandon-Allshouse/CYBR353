@@ -20,24 +20,23 @@
   </nav>
 
   <div class="container">
-    <h2>Assign Routes</h2>
-    <h3>Create / Assign Route</h3>
+    <h2>Assign Routes to Drivers</h2>
+    <h3>Select Driver, Facility, and Packages</h3>
     <form id="assignRouteForm" class="form">
       <div class="form-group">
-        <label for="routeName">Route Name</label>
-        <input type="text" id="routeName" required />
-      </div>
-      <div class="form-group">
-        <label for="driverSelect">Assign Driver</label>
-        <select id="driverSelect">
-          <option value="">-- Select driver --</option>
+        <label for="facilitySelect">Facility</label>
+        <select id="facilitySelect" required>
+          <option value="">-- Select facility --</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="stops">Stops (one per line)</label>
-        <textarea id="stops" rows="4"></textarea>
+        <label for="driverSelect">Assign Driver</label>
+        <select id="driverSelect" required>
+          <option value="">-- Select driver --</option>
+        </select>
       </div>
-      <button type="submit" class="btn">Create & Assign</button>
+      <p class="info-text">📦 Select packages below to assign to this driver. Delivery addresses are shown for each package. Route will be auto-generated based on facility and date.</p>
+      <button type="submit" class="btn">Assign Route to Driver</button>
     </form>
 
     <section>
@@ -48,9 +47,11 @@
             <tr>
               <th>Select</th>
               <th>Tracking #</th>
-              <th>Pickup</th>
-              <th>Delivery</th>
+              <th>Delivery Address</th>
+              <th>Delivery City</th>
+              <th>Delivery ZIP</th>
               <th>Weight</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody id="unassignedPackagesTable">
