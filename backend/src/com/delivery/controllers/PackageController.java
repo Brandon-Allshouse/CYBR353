@@ -609,6 +609,289 @@ public class PackageController {
         }
     }
 
+        public static void handleOrderEdit(HttpExchange exchange) throws IOException {
+        String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
+
+        // CORS headers
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(405, -1);
+            return;
+        }
+
+        // Validate session
+        String token = extractToken(exchange);
+        Result<SessionManager.Session, String> sessionResult = SessionManager.getSession(token);
+        if (sessionResult.isErr()) {
+            AuditLogger.log(null, null, "API_ORDER_EDIT", "denied", clientIp,
+                "Session validation failed: " + sessionResult.unwrapErr());
+            respondJson(exchange, 401, "{\"error\":\"Unauthorized - Please log in\"}");
+            return;
+        }
+        SessionManager.Session session = sessionResult.unwrap();
+
+        // Parse request body
+        String body = readStream(exchange.getRequestBody());
+        Map<String, String> parsed = parseJson(body);
+
+        String tracking = parsed.get("tracking_number");
+        String weightStr = parsed.get("weight");
+        String lengthStr = parsed.get("length");
+        String widthStr = parsed.get("width");
+        String heightStr = parsed.get("height");
+        String notes = parsed.get("notes");
+
+        if (tracking == null || tracking.trim().isEmpty()) {
+            AuditLogger.log(null, session.username, "API_ORDER_EDIT", "denied", clientIp,
+                "Missing tracking_number in request");
+            respondJson(exchange, 400, "{\"error\":\"tracking_number is required\"}");
+            return;
+        }
+
+        // Sanitize tracking and optional fields (as strings)
+        SecurityManager.Result<String, String> tRes = InputSanitizer.sanitizeString(tracking);
+        SecurityManager.Result<String, String> wRes = weightStr != null ? InputSanitizer.sanitizeString(weightStr) : SecurityManager.Result.ok(null);
+        SecurityManager.Result<String, String> lRes = lengthStr != null ? InputSanitizer.sanitizeString(lengthStr) : SecurityManager.Result.ok(null);
+        SecurityManager.Result<String, String> wiRes = widthStr != null ? InputSanitizer.sanitizeString(widthStr) : SecurityManager.Result.ok(null);
+        SecurityManager.Result<String, String> hRes = heightStr != null ? InputSanitizer.sanitizeString(heightStr) : SecurityManager.Result.ok(null);
+        SecurityManager.Result<String, String> notesRes = notes != null ? InputSanitizer.sanitizeString(notes) : SecurityManager.Result.ok("");
+
+        if (tRes.isErr() || wRes.isErr() || lRes.isErr() || wiRes.isErr() || hRes.isErr() || notesRes.isErr()) {
+            AuditLogger.log(null, session.username, "API_ORDER_EDIT", "error", clientIp,
+                "Sanitization failed");
+            respondJson(exchange, 400, "{\"error\":\"Invalid input format\"}");
+            return;
+        }
+
+        String sanitizedTracking = tRes.unwrap();
+        String sanitizedWeight = wRes.unwrap();
+        String sanitizedLength = lRes.unwrap();
+        String sanitizedWidth = wiRes.unwrap();
+        String sanitizedHeight = hRes.unwrap();
+        String sanitizedNotes = notesRes.unwrap();
+
+        // No numeric fields provided -> nothing to update
+        boolean hasUpdate = (sanitizedWeight != null && !sanitizedWeight.isEmpty())
+                         || (sanitizedLength != null && !sanitizedLength.isEmpty())
+                         || (sanitizedWidth != null && !sanitizedWidth.isEmpty())
+                         || (sanitizedHeight != null && !sanitizedHeight.isEmpty());
+
+        if (!hasUpdate) {
+            AuditLogger.log(null, session.username, "API_ORDER_EDIT", "denied", clientIp,
+                "No updatable fields provided");
+            respondJson(exchange, 400, "{\"error\":\"No fields provided to update\"}");
+            return;
+        }
+
+        // DB connection
+        Result<Connection, String> connRes = DatabaseConnection.getConnection();
+        if (connRes.isErr()) {
+            AuditLogger.log(null, session.username, "API_ORDER_EDIT", "error", clientIp,
+                "DB connection failed");
+            respondJson(exchange, 500, "{\"error\":\"Server error\"}");
+            return;
+        }
+        Connection conn = connRes.unwrap();
+
+        try {
+            conn.setAutoCommit(false);
+
+            // Find package and its order owner
+            long packageId = -1;
+            long ownerId = -1;
+            String currentStatus = null;
+            String findQuery = "SELECT p.package_id, p.weight_kg, p.length_cm, p.width_cm, p.height_cm, p.package_status, o.customer_id " +
+                               "FROM packages p JOIN orders o ON p.order_id = o.order_id WHERE p.tracking_number = ?";
+
+            try (PreparedStatement findStmt = conn.prepareStatement(findQuery)) {
+                findStmt.setString(1, sanitizedTracking);
+                try (ResultSet rs = findStmt.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        AuditLogger.log(null, session.username, "API_ORDER_EDIT", "denied", clientIp,
+                            "Package not found: " + sanitizedTracking);
+                        respondJson(exchange, 404, "{\"error\":\"Package not found\"}");
+                        return;
+                    }
+                    packageId = rs.getLong("package_id");
+                    ownerId = rs.getLong("customer_id");
+                    currentStatus = rs.getString("package_status");
+                }
+            }
+
+            // Authorization: allow if owner or manager/admin
+            long userId = getUserId(conn, session.username);
+            boolean isPrivileged = "manager".equals(session.role) || "admin".equals(session.role);
+            if (!isPrivileged && userId != ownerId) {
+                conn.rollback();
+                AuditLogger.log(userId, session.username, "API_ORDER_EDIT", "denied", clientIp,
+                    "User not owner of package");
+                respondJson(exchange, 403, "{\"error\":\"Forbidden - not owner of package\"}");
+                return;
+            }
+
+            // Build dynamic update
+            List<String> setParts = new ArrayList<>();
+            List<Object> params = new ArrayList<>();
+
+            // For history logging, record old values
+            String oldWeight = null, oldLength = null, oldWidth = null, oldHeight = null;
+            try (PreparedStatement sel = conn.prepareStatement("SELECT weight_kg, length_cm, width_cm, height_cm FROM packages WHERE package_id = ?")) {
+                sel.setLong(1, packageId);
+                try (ResultSet rs = sel.executeQuery()) {
+                    if (rs.next()) {
+                        oldWeight = rs.getString("weight_kg");
+                        oldLength = rs.getString("length_cm");
+                        oldWidth = rs.getString("width_cm");
+                        oldHeight = rs.getString("height_cm");
+                    }
+                }
+            }
+
+            if (sanitizedWeight != null && !sanitizedWeight.isEmpty()) {
+                double w = Double.parseDouble(sanitizedWeight);
+                setParts.add("weight_kg = ?");
+                params.add(w);
+            }
+            if (sanitizedLength != null && !sanitizedLength.isEmpty()) {
+                double l = Double.parseDouble(sanitizedLength);
+                setParts.add("length_cm = ?");
+                params.add(l);
+            }
+            if (sanitizedWidth != null && !sanitizedWidth.isEmpty()) {
+                double wi = Double.parseDouble(sanitizedWidth);
+                setParts.add("width_cm = ?");
+                params.add(wi);
+            }
+            if (sanitizedHeight != null && !sanitizedHeight.isEmpty()) {
+                double h = Double.parseDouble(sanitizedHeight);
+                setParts.add("height_cm = ?");
+                params.add(h);
+            }
+
+            if (setParts.isEmpty()) {
+                conn.rollback();
+                respondJson(exchange, 400, "{\"error\":\"No valid numeric fields to update\"}");
+                return;
+            }
+
+            String updateSql = "UPDATE packages SET " + String.join(", ", setParts) + " WHERE package_id = ?";
+            try (PreparedStatement upd = conn.prepareStatement(updateSql)) {
+                int idx = 1;
+                for (Object p : params) {
+                    upd.setObject(idx++, p);
+                }
+                upd.setLong(idx, packageId);
+                upd.executeUpdate();
+            }
+
+            // Insert edit history per-field
+            String historySql = "INSERT INTO package_edit_history (package_id, edited_by, field_name, old_value, new_value, edit_reason) VALUES (?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement hist = conn.prepareStatement(historySql)) {
+                // weight
+                if (sanitizedWeight != null && !sanitizedWeight.isEmpty()) {
+                    hist.setLong(1, packageId);
+                    hist.setLong(2, userId);
+                    hist.setString(3, "weight_kg");
+                    hist.setString(4, oldWeight);
+                    hist.setString(5, sanitizedWeight);
+                    hist.setString(6, sanitizedNotes.isEmpty() ? null : sanitizedNotes);
+                    hist.executeUpdate();
+                }
+                // length
+                if (sanitizedLength != null && !sanitizedLength.isEmpty()) {
+                    hist.setLong(1, packageId);
+                    hist.setLong(2, userId);
+                    hist.setString(3, "length_cm");
+                    hist.setString(4, oldLength);
+                    hist.setString(5, sanitizedLength);
+                    hist.setString(6, sanitizedNotes.isEmpty() ? null : sanitizedNotes);
+                    hist.executeUpdate();
+                }
+                // width
+                if (sanitizedWidth != null && !sanitizedWidth.isEmpty()) {
+                    hist.setLong(1, packageId);
+                    hist.setLong(2, userId);
+                    hist.setString(3, "width_cm");
+                    hist.setString(4, oldWidth);
+                    hist.setString(5, sanitizedWidth);
+                    hist.setString(6, sanitizedNotes.isEmpty() ? null : sanitizedNotes);
+                    hist.executeUpdate();
+                }
+                // height
+                if (sanitizedHeight != null && !sanitizedHeight.isEmpty()) {
+                    hist.setLong(1, packageId);
+                    hist.setLong(2, userId);
+                    hist.setString(3, "height_cm");
+                    hist.setString(4, oldHeight);
+                    hist.setString(5, sanitizedHeight);
+                    hist.setString(6, sanitizedNotes.isEmpty() ? null : sanitizedNotes);
+                    hist.executeUpdate();
+                }
+            }
+
+            // Fetch updated package fields to return
+            String fetchSql = "SELECT tracking_number, weight_kg, length_cm, width_cm, height_cm, package_status FROM packages WHERE package_id = ?";
+            String outTracking = null;
+            double outWeight = 0, outLen = 0, outWid = 0, outHei = 0;
+            String outStatus = null;
+            try (PreparedStatement fetch = conn.prepareStatement(fetchSql)) {
+                fetch.setLong(1, packageId);
+                try (ResultSet rs = fetch.executeQuery()) {
+                    if (rs.next()) {
+                        outTracking = rs.getString("tracking_number");
+                        outWeight = rs.getDouble("weight_kg");
+                        outLen = rs.getDouble("length_cm");
+                        outWid = rs.getDouble("width_cm");
+                        outHei = rs.getDouble("height_cm");
+                        outStatus = rs.getString("package_status");
+                    }
+                }
+            }
+
+            conn.commit();
+
+            AuditLogger.log(userId, session.username, "API_ORDER_EDIT", "success", clientIp,
+                String.format("User %s edited package %s (ID %d)", session.username, outTracking, packageId));
+
+            // Build response JSON (manual like rest of file)
+            StringBuilder resp = new StringBuilder();
+            resp.append("{");
+            resp.append("\"tracking_number\":\"").append(escapeJson(outTracking)).append("\",");
+            resp.append("\"weight\":").append(outWeight).append(",");
+            resp.append("\"length\":").append(outLen).append(",");
+            resp.append("\"width\":").append(outWid).append(",");
+            resp.append("\"height\":").append(outHei).append(",");
+            resp.append("\"status\":\"").append(escapeJson(outStatus)).append("\"");
+            resp.append("}");
+
+            respondJson(exchange, 200, resp.toString());
+
+        } catch (NumberFormatException e) {
+            try { conn.rollback(); } catch (Exception ignored) {}
+            System.err.println("Invalid numeric format: " + e.getMessage());
+            AuditLogger.log(null, null, "API_ORDER_EDIT", "error", clientIp,
+                "Invalid numeric format: " + e.getMessage());
+            respondJson(exchange, 400, "{\"error\":\"Numeric fields must be valid numbers\"}");
+        } catch (SQLException e) {
+            try { conn.rollback(); } catch (Exception ignored) {}
+            e.printStackTrace();
+            AuditLogger.log(null, session.username, "API_ORDER_EDIT", "error", clientIp,
+                "Database error: " + e.getMessage());
+            respondJson(exchange, 500, "{\"error\":\"Server error. Please try again later.\"}");
+        } finally {
+            try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+        }
+    }
+
     // Helper methods
 
     private static String extractToken(HttpExchange exchange) {

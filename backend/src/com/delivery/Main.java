@@ -156,6 +156,9 @@ public class Main {
             if (path.equals("/api/order/place/")) {
                 // POST /api/order/place - Place an order
                 PackageController.handleCreatePackage(exchange);
+            } else if (path.startsWith("/api/order/edit/")) {
+                // POST /api/order/edit/:id - Edit order by ID
+                PackageController.handleOrderEdit(exchange);
             } else if (path.startsWith("/api/order/get/")) {
                 // GET /api/order/get/:id - Get order by ID
                 OrdersController.handleGetOrder(exchange);
@@ -243,7 +246,7 @@ public class Main {
         System.out.println("  GET  /api/inventory/search/:tracking   - Search by tracking number (Manager+)");
         System.out.println("  GET  /api/facilities                   - Get all facilities (Driver+)");
         System.out.println("  GET  /api/trackPackages                - Get Package tracking information (Customer+)");
-        System.out.println("  POST /api/order/place/                - Place a new package (Customer+)");
+        System.out.println("  POST /api/order/place/                 - Place a new package (Customer+)");
         System.out.println("  POST /api/package/edit                 - Edit package details (Manager+)");
         System.out.println("  GET  /api/driver/route                 - Get driver's assigned route (Driver)");
         System.out.println("  POST /api/driver/status                - Update delivery status (Driver)");
