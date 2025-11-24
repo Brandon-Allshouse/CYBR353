@@ -5,6 +5,12 @@ class Router {
 
         this.routes = {
             // Customer routes
+            '/customer/customer-dashboard.html': 'customer/customer-dashboard.html',
+            '/customer/customer-info.html': 'customer/customer-info.html',
+            '/customer/view-packages.html': 'customer/view-packages.html',
+            '/customer/track-packages.html': 'customer/track-packages.html',
+            '/customer/edit-packages.html': 'customer/edit-packages.html',
+            '/customer/return-packages.html': 'customer/return-packages.html',
             '/customer/dashboard': 'customer/customer-dashboard.html',
             '/customer/info': 'customer/customer-info.html',
             '/customer/packages': 'customer/view-packages.html',
@@ -13,21 +19,32 @@ class Router {
             '/customer/return': 'customer/return-packages.html',
 
             // Driver routes
+            '/driver/driver-dashboard.html': 'driver/driver-dashboard.html',
+            '/driver/view-route.html': 'driver/view-route.html',
+            '/driver/driver-login.html': 'driver/driver-login.html',
             '/driver/dashboard': 'driver/driver-dashboard.html',
             '/driver/route': 'driver/view-route.html',
             '/driver/login': 'driver/driver-login.html',
 
             // Management routes
+            '/management/management-dashboard.html': 'management/management-dashboard.html',
+            '/management/assign-routes.html': 'management/assign-routes.html',
+            '/management/transfer-portal.html': 'management/transfer-portal.html',
+            '/management/view-inventory.html': 'management/view-inventory.html',
             '/management/dashboard': 'management/management-dashboard.html',
             '/management/assign-routes': 'management/assign-routes.html',
             '/management/transfer': 'management/transfer-portal.html',
             '/management/inventory': 'management/view-inventory.html',
 
             // Admin routes
+            '/admin/admin-dashboard.html': 'admin/admin-dashboard.html',
+            '/admin/view-logs.html': 'admin/view-logs.html',
             '/admin/dashboard': 'admin/admin-dashboard.html',
             '/admin/logs': 'admin/view-logs.html',
 
             // Auth routes
+            '/login.html': 'login.html',
+            '/register.html': 'register.html',
             '/login': 'login.html',
             '/register': 'register.html',
             '/logout': 'login.html'
@@ -58,12 +75,12 @@ class Router {
         }
 
         // Public routes don't need auth (login, register)
-        const publicRoutes = ['/login', '/register'];
+        const publicRoutes = ['/login', '/register', '/login.html', '/register.html'];
         const isPublic = publicRoutes.includes(path);
 
         // Check authentication for protected routes
         if (!isPublic && !this.isAuthenticated()) {
-            this.navigate('/login');
+            this.navigate('/login.html');
             return;
         }
 
@@ -95,7 +112,7 @@ class Router {
             this.loadContent(file);
         } else {
             // Default to login or 404
-            this.navigate('/login', true);
+            this.navigate('/login.html', true);
         }
     }
 
@@ -207,16 +224,18 @@ class Router {
 
     logout() {
         sessionStorage.clear();
-        this.navigate('/login', true);
+        this.navigate('/login.html', true);
     }
 
     showAccessDenied() {
         alert('Access denied. You do not have permission to view this page.');
         const user = this.getCurrentUser();
         if (user) {
-            this.navigate(`/${user.role}/dashboard`);
+            const role = user.role;
+            const prefix = (role === 'manager') ? 'management' : role;
+            this.navigate(`/${prefix}/${prefix}-dashboard.html`);
         } else {
-            this.navigate('/login');
+            this.navigate('/login.html');
         }
     }
 

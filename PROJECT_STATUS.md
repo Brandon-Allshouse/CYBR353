@@ -1,9 +1,9 @@
 # Optimized Delivery System - Project Status
 
-**Last Updated:** 2025-11-23 (Deep Dive Analysis Complete - Order Placement Workaround Discovered)
+**Last Updated:** 2025-11-24 (Route Assignment Complete - Critical Database & Frontend Fixes)
 **Course:** CYBR 353 (Cybersecurity)
 **Team:** Brody Scott, Dawson Pfabe, Brandon Allshouse, Tyler Slack
-**Current Phase:** 82% Complete - Order Placement Has Workaround (Partial) - Full Implementation Needed
+**Current Phase:** 90% Complete - Route Assignment Fully Functional - Driver Dashboard Implemented
 
 ---
 
@@ -26,17 +26,20 @@ A secure package delivery management system with Bell-LaPadula (BLP) mandatory a
 
 ## 📊 COMPLETION STATUS
 
-### ✅ FULLY IMPLEMENTED (82% Overall - Security Excellent, Core Business Logic Complete)
-**Updated:** 2025-11-23 - Order placement workaround discovered, system more functional than documented
+### ✅ FULLY IMPLEMENTED (90% Overall - Route Assignment Complete, Driver Operations Functional)
+**Updated:** 2025-11-24 - Route assignment end-to-end working with critical database and frontend fixes
 
 **🎉 RECENT MILESTONES:**
-- **NEW (2025-11-23):** Deep dive analysis reveals order placement IS partially working via workaround
-- **NEW:** Project completion: 80% → 82% (order placement workaround functional)
-- **NEW:** All 43 Java files, 22 HTML files, and database schema comprehensively analyzed
-- (2025-11-20) 5 complete controller methods were not registered - NOW ALL REGISTERED
-- (2025-11-20) All endpoints compile without errors and respond correctly
+- **NEW (2025-11-24):** Route assignment fully functional - managers can assign packages to drivers
+- **NEW (2025-11-24):** Driver dashboard implemented - displays assigned routes and packages
+- **NEW (2025-11-24):** Fixed critical DatabaseConnection threading bug (shared static connection)
+- **NEW (2025-11-24):** Fixed database deadlock (reordered UPDATE before INSERT for FK constraints)
+- **NEW (2025-11-24):** Fixed JSON parser bug (comma in values broke multi-package assignments)
+- **NEW (2025-11-24):** Implemented driver view-route page with address grouping
+- **NEW (2025-11-24):** Project completion: 82% → 90%
+- (2025-11-23) Deep dive analysis reveals order placement IS partially working via workaround
+- (2025-11-20) 5 complete controller methods registered - all endpoints functional
 - Backend server fully functional on port 8081
-- Comprehensive code review completed - NO BUGS OR SECURITY ISSUES FOUND
 
 ---
 
@@ -95,37 +98,58 @@ A secure package delivery management system with Bell-LaPadula (BLP) mandatory a
   - POST /api/package/edit → handleEditPackage() (Main.java:192-194) ✅
 - **TEST:** All endpoints respond with proper auth checks
 
-### **Driver Operations (100% ✅ NOW FULLY WORKING)**
-- ✅ View assigned daily route **NOW REGISTERED at /api/driver/route**
-- ✅ Update delivery status **NOW REGISTERED at /api/driver/status**
+### **Driver Operations (100% ✅ FULLY WORKING - 2025-11-24 FRONTEND COMPLETE)**
+- ✅ View assigned daily route **BACKEND + FRONTEND WORKING**
+- ✅ Update delivery status **BACKEND + FRONTEND WORKING**
+- ✅ Driver dashboard displays all assigned packages with addresses
+- ✅ View route page groups packages by delivery address (shows stops)
+- ✅ Mark packages as delivered with confirmation
 - ✅ Route validation (drivers can only update their assigned packages)
 - ✅ Auto-updates order status when package delivered
 - ✅ Records detailed status history in delivery_status_history table
 - ✅ Transaction-based updates with proper rollback handling
-- **FILE:** `backend/src/com/delivery/controllers/DriverController.java` (703 lines complete)
-- **REGISTERED AS OF 2025-11-20:**
-  - GET /api/driver/route → handleGetRoute() (Main.java:197-199) ✅
-  - POST /api/driver/status → handleUpdateDeliveryStatus() (Main.java:201-203) ✅
-- **IMPLEMENTATION DETAILS:**
-  - handleGetRoute(): 235 lines, retrieves driver's assigned route with all packages
-  - handleUpdateDeliveryStatus(): 468 lines, full transaction support with audit logging
-- **TEST:** Login as driver1/driver123, endpoints respond correctly
+- ✅ Real-time statistics (total stops, completed, remaining)
+- **FILES:**
+  - Backend: `DriverController.java` (555 lines complete)
+  - Frontend: `frontend/js/driver.js` (264 lines - NEW IMPLEMENTATION)
+  - Frontend: `frontend/driver/driver-dashboard.html` (displays route summary + package table)
+  - Frontend: `frontend/driver/view-route.html` (groups by address, shows stops)
+- **REGISTERED ENDPOINTS:**
+  - GET /api/driver/route → handleGetRoute() (Main.java:199-201) ✅
+  - POST /api/driver/status → handleUpdateDeliveryStatus() (Main.java:203-205) ✅
+- **NEW FEATURES (2025-11-24):**
+  - Driver dashboard auto-loads assigned route on page load
+  - Displays route summary (name, date, facility, vehicle, duration)
+  - Shows all packages in table with tracking numbers and addresses
+  - "Mark Delivered" button for each package with auto-refresh
+  - View route page groups packages by delivery address (calculates actual stops)
+  - Color-coded status indicators (green for delivered, orange for pending)
+- **TEST:** Login as driver1/driver123 → Driver Dashboard → See assigned route with packages!
 
-### **Management Operations (100% ✅ NOW FULLY WORKING)**
-- ✅ Assign routes to drivers with packages **NOW REGISTERED at /api/management/assign-routes**
+### **Management Operations (100% ✅ FULLY WORKING - 2025-11-24 COMPLETE)**
+- ✅ Assign routes to drivers with packages **FULLY FUNCTIONAL END-TO-END**
+- ✅ Get driver list for route assignment **NEW: /api/management/drivers endpoint**
 - ✅ Generate inventory reports by facility **NOW REGISTERED at /api/management/inventory-report**
 - ✅ Transaction-based route creation (creates route + assignment + packages in one transaction)
 - ✅ Update package status to out_for_delivery automatically
+- ✅ Multi-package route assignment (handles comma-separated package IDs correctly)
+- ✅ Duplicate submission protection (button disabled during processing)
 - ✅ Comprehensive facility statistics and utilization percentages
 - ✅ Detailed package lists with full order/customer information
-- **FILE:** `backend/src/com/delivery/controllers/ManagementController.java` (622 lines complete)
-- **REGISTERED AS OF 2025-11-20:**
-  - POST /api/management/assign-routes → handleAssignRoutes() (Main.java:206-208) ✅
-  - GET /api/management/inventory-report → handleInventoryReport() (Main.java:210-212) ✅
-- **IMPLEMENTATION DETAILS:**
-  - handleAssignRoutes(): 275 lines, full route creation with multi-package support
-  - handleInventoryReport(): 511 lines, comprehensive reporting with detailed package info
-- **TEST:** Login as manager1/mgr123, endpoints respond correctly
+- **FILES:**
+  - Backend: `ManagementController.java` (731 lines - includes handleGetDrivers + fixed parseJson)
+  - Frontend: `frontend/js/management.js` (410 lines - complete route assignment UI)
+  - Frontend: `frontend/management/assign-routes.html` (fully functional with facility/driver selection)
+- **REGISTERED ENDPOINTS:**
+  - POST /api/management/assign-routes → handleAssignRoutes() (Main.java:208-210) ✅
+  - GET /api/management/inventory-report → handleInventoryReport() (Main.java:212-214) ✅
+  - GET /api/management/drivers → handleGetDrivers() (Main.java:216-218) ✅ **NEW**
+- **CRITICAL FIXES (2025-11-24):**
+  - Fixed JSON parser to handle comma-separated values in quoted strings (parseJson method)
+  - Fixed database lock ordering: UPDATE packages BEFORE INSERT route_packages (prevents FK deadlock)
+  - Added comprehensive logging for debugging multi-package assignments
+  - Strengthened duplicate submission protection (isSubmitting flag set immediately)
+- **TEST:** Login as manager1/mgr123 → Assign Routes → Select facility + driver + multiple packages → Success!
 
 ### **Facility Transfer System (100% ✅ TESTED & WORKING)**
 - ✅ Complete end-to-end package transfers between facilities
@@ -711,11 +735,81 @@ String insertPackage =
 
 ---
 
+### CRITICAL BUGS FIXED - ROUTE ASSIGNMENT (2025-11-24)
+
+**Major database and application bugs resolved to enable full route assignment functionality:**
+
+#### 1. **DatabaseConnection Threading Bug** (DatabaseConnection.java:11-41)
+   - **Problem:** Single shared static Connection used across all threads
+   - **Impact:** Thread safety violations, deadlocks, "connection closed" errors
+   - **Root Cause:** `private static Connection conn = null` reused by all HTTP requests
+   - **Fix:** Changed to create new connection per request, cache only credentials
+   - **Result:** Each thread gets dedicated connection, no conflicts
+
+#### 2. **Database Deadlock on Route Assignment** (ManagementController.java:218-241)
+   - **Problem:** MySQL deadlock when assigning packages to routes
+   - **Impact:** Route creation succeeded but package assignment failed
+   - **Root Cause:** Foreign key constraint lock escalation
+     - `INSERT INTO route_packages` acquired shared lock on `packages.package_id` (FK check)
+     - `UPDATE packages` tried to acquire exclusive lock on same row
+     - Deadlock: Can't upgrade shared → exclusive lock
+   - **Fix:** Reordered operations - UPDATE packages FIRST, then INSERT route_packages
+   - **Result:** No more deadlocks, smooth transaction completion
+
+#### 3. **JSON Parser Breaks Multi-Package Routes** (ManagementController.java:594-630)
+   - **Problem:** Only first package assigned when selecting multiple packages
+   - **Impact:** "packageIds":"3,4" parsed as only "3", second package ignored
+   - **Root Cause:** Naive comma split didn't respect quoted strings
+     - Split: `"packageIds":"3,4"` → `["packageIds":"3"`, `4"]`
+     - Lost second package completely
+   - **Fix:** Implemented quote-aware parser with state tracking
+   - **Result:** Correctly handles comma-separated values in JSON strings
+
+#### 4. **Duplicate Route Creation** (management.js:314-396)
+   - **Problem:** Double-clicking "Assign Route" created 2 routes with same packages
+   - **Impact:** Database showed duplicate routes with identical timestamps
+   - **Root Cause:** isSubmitting flag set AFTER validation, allowing race condition
+   - **Fix:**
+     - Set `isSubmitting = true` IMMEDIATELY after preventDefault()
+     - Disable button before any validation
+     - All early returns properly reset flag
+   - **Result:** Prevents any duplicate submissions
+
+#### 5. **Driver Dashboard Not Implemented** (driver.js:1-264)
+   - **Problem:** driver.js was 12-line stub, no route display functionality
+   - **Impact:** Drivers couldn't see assigned routes despite backend working
+   - **Fix:** Implemented complete driver dashboard system:
+     - `fetchDriverRoute()` - calls /api/driver/route
+     - `initializeDriverDashboard()` - displays route summary + packages table
+     - `initializeViewRoute()` - groups packages by delivery address
+     - `markDelivered()` - updates package status with confirmation
+   - **Result:** Full driver interface with route viewing and status updates
+
+#### 6. **Field Name Mismatch** (management.js:239, 247, 278-284)
+   - **Problem:** JavaScript used snake_case but JSON from backend uses camelCase
+   - **Impact:** `item.package_status` returned undefined, packages didn't display
+   - **Fix:** Updated all field references to camelCase (packageStatus, packageId, trackingNumber, weightKg, deliveryAddress)
+   - **Result:** Packages display correctly in route assignment table
+
+**Files Modified:**
+- `backend/src/com/delivery/database/DatabaseConnection.java` (redesigned connection management)
+- `backend/src/com/delivery/controllers/ManagementController.java` (lock ordering + JSON parser fix)
+- `frontend/js/management.js` (duplicate protection + field names)
+- `frontend/js/driver.js` (complete implementation from stub)
+
+**Testing:**
+- ✅ Route assignment with multiple packages works end-to-end
+- ✅ No deadlocks or connection errors
+- ✅ Driver dashboard displays routes correctly
+- ✅ Package status updates work properly
+
+---
+
 ## 🚀 NEXT STEPS (Priority Order)
 
 ### 🔥 CRITICAL PRIORITY 1: Implement Order Placement (3-4 hours) ⚡ URGENT
 
-**This is the ONLY major blocker remaining. Everything else is working.**
+**This is now the ONLY major missing feature. All routing and driver operations are complete.**
 
 **Tasks:**
 1. Implement OrderDAO.java (1.5 hours)
@@ -740,22 +834,22 @@ String insertPackage =
    - Check audit logs
    - Test with frontend
 
-**Impact:** Completes Use Case 2, enables entire customer workflow, raises project to 90%+ completion
+**Impact:** Completes Use Case 2, enables entire customer workflow, raises project to 95%+ completion
 
 ---
 
-### ⚠️ MEDIUM PRIORITY 2: Frontend Integration (1-2 hours)
+### ✅ COMPLETED (2025-11-24): Frontend Integration
 
-5. **Test all newly registered endpoints from frontend**
-   - Driver route viewing and status updates
-   - Management route assignment
-   - Package editing
-   - Verify session management works across all pages
+5. ~~**Test all newly registered endpoints from frontend**~~ ✅ DONE
+   - ✅ Driver route viewing and status updates - WORKING
+   - ✅ Management route assignment - WORKING END-TO-END
+   - ✅ Package editing - BACKEND READY
+   - ✅ Session management verified across all pages
 
-6. **Update frontend JavaScript for real API calls**
-   - driver.js - call /api/driver/route and /api/driver/status
-   - management.js - call /api/management/assign-routes
-   - orders.js - call /api/order/place once implemented
+6. ~~**Update frontend JavaScript for real API calls**~~ ✅ DONE
+   - ✅ driver.js - calls /api/driver/route and /api/driver/status (264 lines implemented)
+   - ✅ management.js - calls /api/management/assign-routes (410 lines with full UI)
+   - ⚠️ orders.js - still uses workaround, needs OrdersController implementation
 
 ---
 

@@ -68,13 +68,12 @@ class AuthHandler {
                 setTimeout(() => {
                     // map role -> route prefix (manager -> management)
                     const prefix = (role === 'manager') ? 'management' : role;
-                    const target = `/${prefix}/dashboard`;
+                    const target = `/${prefix}/${prefix}-dashboard.html`;
                     if (window.appRouter) {
                         window.appRouter.navigate(target);
                     } else {
                         // fallback to direct navigation to the role's dashboard HTML
-                        const fallback = `${prefix}/${prefix}-dashboard.html`;
-                        window.location.href = fallback;
+                        window.location.href = target;
                     }
                 }, 300);
             } else {
