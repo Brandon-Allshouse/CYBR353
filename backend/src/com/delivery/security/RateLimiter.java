@@ -5,15 +5,16 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Token bucket rate limiting to prevent brute force attacks and API abuse
+ * Tracks requests per identifier:action pair with sliding 60-second windows
+ */
 public class RateLimiter {
-    
-    private static final int MAX_REQUESTS_PER_MINUTE = 60;
-    private static final int LOGIN_MAX_REQUESTS = 5; // Stricter for login
+
+    private static final int MAX_REQUESTS_PER_MINUTE = 2;
+    private static final int LOGIN_MAX_REQUESTS = 5;
     private static final Map<String, RateLimitInfo> rateLimitMap = new ConcurrentHashMap<>();
 
-    /**
-     * Checks if a request should be allowed
-     */
     public static Result<Boolean, String> allowRequest(String identifier, String action) {
         if (identifier == null || action == null) {
             return Result.err("Identifier and action are required");
@@ -21,30 +22,28 @@ public class RateLimiter {
 
         String key = identifier + ":" + action;
         int maxRequests = action.equalsIgnoreCase("LOGIN") ? LOGIN_MAX_REQUESTS : MAX_REQUESTS_PER_MINUTE;
-        
+
         RateLimitInfo info = rateLimitMap.get(key);
         Instant now = Instant.now();
 
         if (info == null) {
-            // First request
             info = new RateLimitInfo(1, now);
             rateLimitMap.put(key, info);
             return Result.ok(true);
         }
 
         long secondsElapsed = now.getEpochSecond() - info.windowStart.getEpochSecond();
-        
+
+        // Reset counter if window expired, otherwise increment within current window
         if (secondsElapsed < 60) {
             if (info.requestCount >= maxRequests) {
-                AuditLogger.logSecurityEvent("RATE_LIMIT_EXCEEDED",
-                    String.format("Rate limit exceeded for %s on %s (%d requests)", 
-                                identifier, action, info.requestCount),
-                    identifier);
+                // Log rate limit violation for security monitoring (IP not available in rate limiter context)
+                AuditLogger.logSecurityEvent(null, identifier, "RATE_LIMIT_EXCEEDED", null,
+                    String.format("Rate limit exceeded on %s (%d requests in window)", action, info.requestCount));
                 return Result.err(String.format("Rate limit exceeded. Max %d requests/minute.", maxRequests));
             }
             info.requestCount++;
         } else {
-            // New time window
             info.requestCount = 1;
             info.windowStart = now;
         }
@@ -52,25 +51,21 @@ public class RateLimiter {
         return Result.ok(true);
     }
 
-    /**
-     * Clears rate limit for an identifier
-     */
     public static Result<Void, String> clearRateLimit(String identifier) {
         if (identifier == null) {
             return Result.err("Identifier cannot be null");
         }
 
         rateLimitMap.entrySet().removeIf(entry -> entry.getKey().startsWith(identifier + ":"));
-        
-        AuditLogger.logSecurityEvent("RATE_LIMIT_CLEARED",
-            "Rate limit cleared for " + identifier, identifier);
-        
+
+        // Log rate limit reset for audit trail
+        AuditLogger.logSecurityEvent(null, identifier, "RATE_LIMIT_CLEARED", null,
+            "Rate limit counters cleared");
+
         return Result.ok(null);
     }
 
-    /**
-     * Temporarily bans an identifier
-     */
+    // Creates background thread to auto-expire ban after duration
     public static Result<Void, String> temporaryBan(String identifier, int durationSeconds) {
         if (identifier == null) {
             return Result.err("Identifier cannot be null");
@@ -80,11 +75,10 @@ public class RateLimiter {
         RateLimitInfo info = new RateLimitInfo(Integer.MAX_VALUE, Instant.now());
         rateLimitMap.put(key, info);
 
-        AuditLogger.logSecurityEvent("TEMPORARY_BAN",
-            String.format("Identifier %s banned for %d seconds", identifier, durationSeconds),
-            identifier);
+        // Log temporary ban event for security monitoring
+        AuditLogger.logSecurityEvent(null, identifier, "TEMPORARY_BAN", null,
+            String.format("Identifier banned for %d seconds", durationSeconds));
 
-        // Schedule removal
         new Thread(() -> {
             try {
                 Thread.sleep(durationSeconds * 1000L);
@@ -97,9 +91,6 @@ public class RateLimiter {
         return Result.ok(null);
     }
 
-    /**
-     * Checks if identifier is banned
-     */
     public static Result<Boolean, String> isBanned(String identifier) {
         if (identifier == null) {
             return Result.err("Identifier cannot be null");
@@ -109,9 +100,7 @@ public class RateLimiter {
         return Result.ok(banned);
     }
 
-    /**
-     * Cleanup old rate limit entries
-     */
+    // Removes stale entries older than 2 minutes to prevent memory leaks
     public static Result<Integer, String> cleanupRateLimits() {
         Instant cutoff = Instant.now().minusSeconds(120);
         int removed = 0;
@@ -138,3 +127,7 @@ public class RateLimiter {
         }
     }
 }
+
+
+
+//fix

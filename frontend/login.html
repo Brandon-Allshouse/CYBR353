@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - System Access</title>
+    <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -16,7 +17,7 @@
 
         <div id="errorDisplay" class="error-message"></div>
 
-        <form id="loginForm" novalidate>
+        <form id="loginForm" method="post" action="#" novalidate>
             <div class="form-group">
                 <label for="username">Username</label>
                 <input 
@@ -50,10 +51,12 @@
         </form>
 
         <div class="forgot-password">
-            <a href="#">Forgot your password?</a>
+            <a href="#">Forgot your password?</a> |
+            <a href="#" data-route="/register">Create an account</a>
         </div>
     </div>
 
+    <script src="js/router.js"></script>
     <script src="js/auth.js"></script>
 </body>
 </html>

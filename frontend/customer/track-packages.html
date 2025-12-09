@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Packages - Delivery System</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery System</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link" data-route="/customer/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/info">Account Info</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/packages">View Packages</a></li>
+        <li><a href="#" class="nav-link active" data-route="/customer/track">Track Packages</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/edit">Edit Packages</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/return">Place Packages</a></li>
+        <li><a href="#" class="nav-link" data-route="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>Track Packages</h2>
+    <h3>Track a Package</h3>
+    <form id="trackForm" class="form">
+      <div class="form-group">
+        <label for="trackingNumber">Tracking Number</label>
+        <input type="text" id="trackingNumber" placeholder="Enter tracking number" required />
+      </div>
+    </form>
+    <button onclick="getTracking()" class="btn">Track</button>
+
+    <div class="section">
+      <h3>Tracking History</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="trackingHistoryTable">
+            <tr><td colspan="4" class="no-data">No tracking history to display.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p><a href="#" data-route="/customer/dashboard">Back to Customer Dashboard</a></p>
+  </div>
+
+  <script src="../js/router.js"></script>
+  <script src="../js/track.js"></script>
+  <script>
+    // Access control: only allow customers
+    (function(){
+      const allowed = ['customer'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try { const u = JSON.parse(raw); const role = (u.role||'').toString().toLowerCase(); if (!allowed.includes(role)) { alert('Access denied'); const dest = (role==='manager') ? 'management' : role; if (dest) window.location.href = `/${dest}/dashboard`; else window.location.href = '/login'; } } catch(e){ window.location.href = '/login'; }
+    })();
+  </script>
+
+
+</body>
+</html>

@@ -2,12 +2,14 @@ package com.delivery.util;
 
 import java.util.function.Function;
 
+/**
+ * Rust-inspired Result type for explicit error handling without exceptions
+ * Forces callers to handle both success (Ok) and failure (Err) cases
+ */
 public abstract class Result<T, E> {
 
-    // Private constructor prevents external instantiation
     private Result() {}
 
-    // Success case containing value
     public static final class Ok<T, E> extends Result<T, E> {
         private final T value;
 
@@ -20,7 +22,6 @@ public abstract class Result<T, E> {
         }
     }
 
-    // Failure case containing error
     public static final class Err<T, E> extends Result<T, E> {
         private final E error;
 
@@ -33,7 +34,6 @@ public abstract class Result<T, E> {
         }
     }
 
-    // Factory methods
     public static <T, E> Result<T, E> ok(T value) {
         return new Ok<>(value);
     }
@@ -42,7 +42,6 @@ public abstract class Result<T, E> {
         return new Err<>(error);
     }
 
-    // Type checking
     public boolean isOk() {
         return this instanceof Ok;
     }
@@ -51,7 +50,7 @@ public abstract class Result<T, E> {
         return this instanceof Err;
     }
 
-    // Safe value extraction
+    // Extracts value or throws RuntimeException if Err - check isOk() first
     public T unwrap() {
         if (this instanceof Ok) {
             return ((Ok<T, E>) this).getValue();
@@ -73,7 +72,6 @@ public abstract class Result<T, E> {
         throw new RuntimeException("Called unwrapErr on Ok");
     }
 
-    // Transformation
     public <U> Result<U, E> map(Function<T, U> mapper) {
         if (this instanceof Ok) {
             return ok(mapper.apply(((Ok<T, E>) this).getValue()));

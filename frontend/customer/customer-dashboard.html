@@ -1,0 +1,86 @@
+2<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Customer Dashboard</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery System</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link active" data-route="/customer/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/info">Account Info</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/packages">View Packages</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/track">Track Packages</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/edit">Edit Packages</a></li>
+        <li><a href="#" class="nav-link" data-route="/customer/return">Place Packages</a></li>
+        <li><a href="#" class="nav-link" data-route="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+  <div class="container">
+    <h2>Customer Dashboard</h2>
+    <section class="cards">
+      <div class="card">
+        <h3>Active Packages</h3>
+        <p id="activeCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Pending Returns</h3>
+        <p id="returnCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Recent Activity</h3>
+        <p id="recentActivity">None</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3>Your Packages</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Tracking #</th>
+              <th>Recipient</th>
+              <th>Address</th>
+              <th>Weight</th>
+              <th>Status</th>
+              <th>ETA</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="customerPackagesTable">
+            <tr><td colspan="7" class="no-data">No packages found.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="/js/router.js"></script>
+  <script src="/js/orders.js"></script>
+
+  <script>
+    // Access control: only allow customers
+    (function(){
+      const allowed = ['customer'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try {
+        const u = JSON.parse(raw);
+        const role = (u.role || '').toString().toLowerCase();
+        if (!allowed.includes(role)) {
+          alert('Access denied: insufficient permissions');
+          const destPrefix = (role === 'manager') ? 'management' : role;
+          if (destPrefix) window.location.href = `/${destPrefix}/dashboard`; else window.location.href = '/login';
+        }
+      } catch(e) { window.location.href = '/login'; }
+    })();
+  </script>
+
+</body>
+</html>

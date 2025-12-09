@@ -63,6 +63,7 @@ logs/
 *.swp
 *.swo
 *~
+.claude/settings.local.json
 
 # Database files (if anyone accidentally generates these)
 *.sql.backup
@@ -87,3 +88,4 @@ node_modules/
 credentials.txt
 passwords.txt
 secrets.txt
+

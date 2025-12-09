@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory - Delivery System</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">Delivery Management</h1>
+            <ul class="nav-menu">
+                <li><a href="management-dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="assign-routes.html" class="nav-link">Assign Routes</a></li>
+                <li><a href="transfer-portal.html" class="nav-link">Transfer Portal</a></li>
+                <li><a href="view-inventory.html" class="nav-link active">View Inventory</a></li>
+                <li><a href="#" class="nav-link" onclick="logout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2>Facility Inventory Management</h2>
+
+        <!-- Inventory Statistics Cards -->
+        <section class="quick-links" style="margin-bottom: 2rem;">
+            <div class="card">
+                <h3>Total Packages</h3>
+                <p id="totalPackages" style="font-size: 2rem; font-weight: 600; color: #2563eb;">-</p>
+            </div>
+            <div class="card">
+                <h3>Facilities</h3>
+                <p id="totalFacilities" style="font-size: 2rem; font-weight: 600; color: #2563eb;">-</p>
+            </div>
+            <div class="card">
+                <h3>In Stock</h3>
+                <p id="inStockCount" style="font-size: 2rem; font-weight: 600; color: #16a34a;">-</p>
+            </div>
+        </section>
+
+        <!-- Filter Controls -->
+        <section class="section">
+            <h3>Filter Inventory</h3>
+            <div class="form" style="max-width: 100%;">
+                <div class="form-group" style="display: flex; gap: 1rem; align-items: flex-end;">
+                    <div style="flex: 1;">
+                        <label for="facilitySelect">Filter by Facility</label>
+                        <select id="facilitySelect" class="form-control" onchange="loadInventory()">
+                            <option value="">All Facilities</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="searchTracking">Search by Tracking Number</label>
+                        <input type="text" id="searchTracking" class="form-control" placeholder="Enter tracking number">
+                    </div>
+                    <button type="button" class="btn" onclick="searchByTracking()">Search</button>
+                    <button type="button" class="btn" onclick="clearSearch()" style="background-color: #64748b;">Clear</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Message Display -->
+        <div id="messageDisplay" style="display: none; margin: 1rem 0;"></div>
+
+        <!-- Inventory Table -->
+        <section class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0;">
+                    <span id="inventoryTitle">All Inventory</span>
+                    <span id="loadingIndicator" style="display: none; margin-left: 1rem; color: #64748b; font-size: 0.9rem;">
+                        Loading...
+                    </span>
+                </h3>
+                <button type="button" class="btn" onclick="exportInventoryReport()" style="background-color: #059669;">
+                    Export Report (CSV)
+                </button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tracking Number</th>
+                            <th>Facility</th>
+                            <th>Customer</th>
+                            <th>From → To</th>
+                            <th>Package Details</th>
+                            <th>Status</th>
+                            <th>Arrival Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTable">
+                        <tr><td colspan="7" class="no-data">Loading inventory...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Package Details Modal (shown when clicking a row) -->
+        <div id="packageDetailsModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000; max-width: 600px; width: 90%;">
+            <h3 style="margin-top: 0;">Package Details</h3>
+            <div id="packageDetailsContent"></div>
+            <button class="btn" onclick="closePackageDetails()" style="margin-top: 1rem;">Close</button>
+        </div>
+        <div id="modalOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="closePackageDetails()"></div>
+    </div>
+
+    <script src="../js/router.js"></script>
+    <script>
+        // Access control: only allow managers and admins
+        (function(){
+            const allowed = ['manager', 'admin'];
+            const raw = sessionStorage.getItem('user');
+            if (!raw) { window.location.href = '/login.html'; return; }
+            try {
+                const u = JSON.parse(raw);
+                const role = (u.role || '').toString().toLowerCase();
+                if (!allowed.includes(role)) {
+                    alert('Access denied: Insufficient clearance');
+                    window.location.href = '/login.html';
+                }
+            } catch(e){ window.location.href = '/login.html'; }
+        })();
+
+        // Global variables
+        let allInventory = [];
+        let allFacilities = [];
+
+        // Initialize - execute immediately when script loads
+        (async function init() {
+            await loadFacilities();
+            await loadInventory();
+        })();
+
+        // Load facilities dropdown
+        async function loadFacilities() {
+            try {
+                const response = await fetch('http://localhost:8081/api/facilities', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Session expired. Please login again.');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                allFacilities = data.facilities || data || [];
+
+                const select = document.getElementById('facilitySelect');
+                select.innerHTML = '<option value="">All Facilities</option>';
+                allFacilities.forEach(facility => {
+                    const option = document.createElement('option');
+                    option.value = facility.facilityId;
+                    option.textContent = facility.facilityName;
+                    select.appendChild(option);
+                });
+
+                document.getElementById('totalFacilities').textContent = allFacilities.length;
+
+            } catch (error) {
+                console.error('Error loading facilities:', error);
+                showMessage('Error loading facilities: ' + error.message, 'error');
+            }
+        }
+
+        // Load inventory (all or by facility)
+        async function loadInventory() {
+            const facilityId = document.getElementById('facilitySelect').value;
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const tableBody = document.getElementById('inventoryTable');
+
+            loadingIndicator.style.display = 'inline';
+            tableBody.innerHTML = '<tr><td colspan="7" class="no-data">Loading...</td></tr>';
+
+            try {
+                let url = 'http://localhost:8081/api/inventory';
+                if (facilityId) {
+                    url = `http://localhost:8081/api/inventory/facility/${facilityId}`;
+                    const facility = allFacilities.find(f => f.facilityId == facilityId);
+                    document.getElementById('inventoryTitle').textContent =
+                        `Inventory - ${facility ? facility.facilityName : 'Facility ' + facilityId}`;
+                } else {
+                    document.getElementById('inventoryTitle').textContent = 'All Inventory';
+                }
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Session expired. Please login again.');
+                        window.location.href = '/login.html';
+                        return;
+                    } else if (response.status === 403) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Access denied');
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                allInventory = data.inventory || data || [];
+                displayInventory(allInventory);
+                updateStatistics(allInventory);
+
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                showMessage('Error loading inventory: ' + error.message, 'error');
+                tableBody.innerHTML = '<tr><td colspan="7" class="no-data">Error loading inventory. Please try again.</td></tr>';
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        // Display inventory in table
+        function displayInventory(items) {
+            const tableBody = document.getElementById('inventoryTable');
+
+            if (items.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="no-data">No packages in inventory.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = items.map(item => {
+                const statusClass = getStatusClass(item.inventoryStatus);
+                const fragileBadge = item.fragile ? '<span style="color: #dc2626; font-weight: 600;">⚠ FRAGILE</span>' : '';
+                const signatureBadge = item.signatureRequired ? '<span style="color: #2563eb; font-weight: 600;">✓ Signature</span>' : '';
+
+                return `
+                    <tr onclick="showPackageDetails(${item.packageId})" style="cursor: pointer;">
+                        <td><strong>${escapeHtml(item.trackingNumber)}</strong></td>
+                        <td>${escapeHtml(item.facilityName)}</td>
+                        <td>${escapeHtml(item.customerName)}</td>
+                        <td style="font-size: 0.85rem;">
+                            <div>${escapeHtml(item.pickupAddress)}</div>
+                            <div style="margin: 0.25rem 0;">→</div>
+                            <div>${escapeHtml(item.deliveryAddress)}</div>
+                        </td>
+                        <td>
+                            <div>${item.weightKg} kg | ${item.lengthCm}×${item.widthCm}×${item.heightCm} cm</div>
+                            <div style="margin-top: 0.25rem;">${fragileBadge} ${signatureBadge}</div>
+                        </td>
+                        <td><span class="status-badge ${statusClass}">${escapeHtml(item.inventoryStatus)}</span></td>
+                        <td>${formatDateTime(item.arrivalTime)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Search by tracking number
+        async function searchByTracking() {
+            const trackingNumber = document.getElementById('searchTracking').value.trim();
+
+            if (!trackingNumber) {
+                showMessage('Please enter a tracking number', 'error');
+                return;
+            }
+
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const tableBody = document.getElementById('inventoryTable');
+
+            loadingIndicator.style.display = 'inline';
+            document.getElementById('inventoryTitle').textContent = `Search Results: ${trackingNumber}`;
+
+            try {
+                const response = await fetch(`http://localhost:8081/api/inventory/search/${trackingNumber}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showMessage('Package not found in inventory', 'error');
+                        tableBody.innerHTML = '<tr><td colspan="7" class="no-data">Package not found.</td></tr>';
+                        return;
+                    } else if (response.status === 401) {
+                        alert('Session expired. Please login again.');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const item = await response.json();
+                displayInventory([item]);
+                updateStatistics([item]);
+                showMessage(`Found package: ${item.trackingNumber}`, 'success');
+
+            } catch (error) {
+                console.error('Error searching:', error);
+                showMessage('Error searching: ' + error.message, 'error');
+                tableBody.innerHTML = '<tr><td colspan="7" class="no-data">Error searching. Please try again.</td></tr>';
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        // Clear search and reload
+        function clearSearch() {
+            document.getElementById('searchTracking').value = '';
+            document.getElementById('facilitySelect').value = '';
+            loadInventory();
+        }
+
+        // Show package details modal
+        function showPackageDetails(packageId) {
+            const item = allInventory.find(i => i.packageId === packageId);
+            if (!item) return;
+
+            const content = `
+                <div style="display: grid; gap: 0.75rem;">
+                    <div><strong>Tracking Number:</strong> ${escapeHtml(item.trackingNumber)}</div>
+                    <div><strong>Order ID:</strong> ${item.orderId}</div>
+                    <div><strong>Customer:</strong> ${escapeHtml(item.customerName)}</div>
+                    <div><strong>Current Facility:</strong> ${escapeHtml(item.facilityName)}</div>
+                    <hr>
+                    <div><strong>Package Status:</strong> <span class="status-badge ${getStatusClass(item.packageStatus)}">${escapeHtml(item.packageStatus)}</span></div>
+                    <div><strong>Inventory Status:</strong> <span class="status-badge ${getStatusClass(item.inventoryStatus)}">${escapeHtml(item.inventoryStatus)}</span></div>
+                    <div><strong>Order Status:</strong> <span class="status-badge ${getStatusClass(item.orderStatus)}">${escapeHtml(item.orderStatus)}</span></div>
+                    <hr>
+                    <div><strong>Dimensions:</strong> ${item.lengthCm} × ${item.widthCm} × ${item.heightCm} cm</div>
+                    <div><strong>Weight:</strong> ${item.weightKg} kg</div>
+                    <div><strong>Fragile:</strong> ${item.fragile ? 'Yes ⚠' : 'No'}</div>
+                    <div><strong>Signature Required:</strong> ${item.signatureRequired ? 'Yes ✓' : 'No'}</div>
+                    <hr>
+                    <div><strong>Pickup Address:</strong><br>${escapeHtml(item.pickupAddress)}</div>
+                    <div><strong>Delivery Address:</strong><br>${escapeHtml(item.deliveryAddress)}</div>
+                    ${item.deliveryInstructions ? `<div><strong>Delivery Instructions:</strong><br>${escapeHtml(item.deliveryInstructions)}</div>` : ''}
+                    <hr>
+                    <div><strong>Arrived at Facility:</strong> ${formatDateTime(item.arrivalTime)}</div>
+                    ${item.departureTime ? `<div><strong>Departed:</strong> ${formatDateTime(item.departureTime)}</div>` : ''}
+                </div>
+            `;
+
+            document.getElementById('packageDetailsContent').innerHTML = content;
+            document.getElementById('packageDetailsModal').style.display = 'block';
+            document.getElementById('modalOverlay').style.display = 'block';
+        }
+
+        // Close package details modal
+        function closePackageDetails() {
+            document.getElementById('packageDetailsModal').style.display = 'none';
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        // Update statistics cards
+        function updateStatistics(items) {
+            document.getElementById('totalPackages').textContent = items.length;
+            const inStock = items.filter(i => i.inventoryStatus === 'in_stock').length;
+            document.getElementById('inStockCount').textContent = inStock;
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('messageDisplay');
+            messageDiv.className = `message message-${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Helper functions
+        function getStatusClass(status) {
+            const statusMap = {
+                'in_stock': 'status-available',
+                'checked_out': 'status-in-transit',
+                'transferred': 'status-delivered',
+                'pending': 'status-pending',
+                'at_facility': 'status-available',
+                'in_transit': 'status-in-transit',
+                'out_for_delivery': 'status-active',
+                'delivered': 'status-delivered',
+                'confirmed': 'status-available'
+            };
+            return statusMap[status] || 'status-pending';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatDateTime(timestamp) {
+            if (!timestamp) return 'N/A';
+            const date = new Date(timestamp);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function exportInventoryReport() {
+            if (allInventory.length === 0) {
+                showMessage('No inventory data to export', 'error');
+                return;
+            }
+
+            const headers = [
+                'Tracking Number', 'Facility', 'Customer', 'Pickup Address', 'Delivery Address',
+                'Weight (kg)', 'Dimensions (cm)', 'Fragile', 'Signature Required',
+                'Package Status', 'Inventory Status', 'Order Status', 'Arrival Time'
+            ];
+
+            const rows = allInventory.map(item => [
+                item.trackingNumber,
+                item.facilityName,
+                item.customerName,
+                item.pickupAddress,
+                item.deliveryAddress,
+                item.weightKg,
+                `${item.lengthCm}x${item.widthCm}x${item.heightCm}`,
+                item.fragile ? 'Yes' : 'No',
+                item.signatureRequired ? 'Yes' : 'No',
+                item.packageStatus,
+                item.inventoryStatus,
+                item.orderStatus,
+                formatDateTime(item.arrivalTime)
+            ]);
+
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            const facilityFilter = document.getElementById('facilitySelect').value;
+            const filename = facilityFilter
+                ? `inventory_facility_${facilityFilter}_${new Date().toISOString().split('T')[0]}.csv`
+                : `inventory_all_${new Date().toISOString().split('T')[0]}.csv`;
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showMessage(`Exported ${allInventory.length} items to ${filename}`, 'success');
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>

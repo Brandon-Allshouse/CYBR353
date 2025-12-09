@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Dashboard</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">Delivery System</h1>
+      <ul class="nav-menu">
+        <li><a href="#" class="nav-link active" data-route="/driver/dashboard">Dashboard</a></li>
+        <li><a href="#" class="nav-link" data-route="/driver/route">View Route</a></li>
+        <li><a href="#" class="nav-link" data-route="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2>Driver Dashboard</h2>
+
+    <section class="cards">
+      <div class="card">
+        <h3>Total Stops</h3>
+        <p id="totalStops">0</p>
+      </div>
+      <div class="card">
+        <h3>Completed Deliveries</h3>
+        <p id="completedDeliveries">0</p>
+      </div>
+      <div class="card">
+        <h3>Remaining Deliveries</h3>
+        <p id="remainingDeliveries">0</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3>Assigned Deliveries</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Stop #</th>
+              <th>Tracking #</th>
+              <th>Recipient</th>
+              <th>Address</th>
+              <th>ETA</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="driverAssignmentsTable">
+            <tr><td colspan="7" class="no-data">No assignments yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h4>Route Summary</h4>
+      <p id="routeSummary">No active route</p>
+    </section>
+  </div>
+
+  <script src="../js/router.js"></script>
+  <script src="../js/driver.js"></script>
+  <script>
+    // Access control: only allow drivers
+    (function(){
+      const allowed = ['driver'];
+      const raw = sessionStorage.getItem('user');
+      if (!raw) { window.location.href = '/login'; return; }
+      try {
+        const u = JSON.parse(raw);
+        const role = (u.role || '').toString().toLowerCase();
+        if (!allowed.includes(role)) {
+          alert('Access denied');
+          const dest = (role === 'manager') ? 'management' : role;
+          if (dest) window.location.href = `/${dest}/dashboard`;
+          else window.location.href = '/login';
+        }
+      } catch(e) { window.location.href = '/login'; }
+    })();
+  </script>
+</body>
+</html>

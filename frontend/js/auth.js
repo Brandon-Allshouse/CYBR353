@@ -1,29 +1,38 @@
 // Auth.js - Authentication Handler
-class AuthHandler {
+// Use conditional declaration to allow script reloading
+if (typeof AuthHandler === 'undefined') {
+    window.AuthHandler = class {
     constructor() {
         this.form = document.getElementById('loginForm');
         this.usernameInput = document.getElementById('username');
         this.passwordInput = document.getElementById('password');
         this.loginBtn = document.getElementById('loginBtn');
         this.errorDisplay = document.getElementById('errorDisplay');
-        
+
+        if (!this.form) {
+            return;
+        }
+
         this.init();
     }
 
     init() {
         this.form.addEventListener('submit', (e) => this.handleSubmit(e));
-        
-        // Clear errors on input
-        this.usernameInput.addEventListener('input', () => this.clearFieldError('username'));
-        this.passwordInput.addEventListener('input', () => this.clearFieldError('password'));
+
+        if (this.usernameInput) {
+            this.usernameInput.addEventListener('input', () => this.clearFieldError('username'));
+        }
+        if (this.passwordInput) {
+            this.passwordInput.addEventListener('input', () => this.clearFieldError('password'));
+        }
     }
 
     async handleSubmit(e) {
         e.preventDefault();
-        
+
         // Clear previous errors
         this.clearAllErrors();
-        
+
         // Validate form
         if (!this.validateForm()) {
             return;
@@ -39,12 +48,12 @@ class AuthHandler {
         this.setLoading(true);
 
         try {
-            // Send login request to backend server
-            const response = await fetch('http://localhost:8081/login', {
+            const response = await fetch('http://localhost:8081/api/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify(credentials)
             });
 
@@ -53,9 +62,22 @@ class AuthHandler {
             if (response.ok) {
                 // Store user info in session
                 this.storeUserSession(data);
-                
-                // Redirect based on role
-                this.redirectUser(data.role || data.clearanceLevel);
+
+                // Prefer role-based redirect (server returns role). Use SPA router when available.
+                const role = (data.role || data.clearanceLevel || '').toString().toLowerCase();
+                this.storeUserSession(Object.assign({}, data, { role }));
+
+                setTimeout(() => {
+                    // map role -> route prefix (manager -> management)
+                    const prefix = (role === 'manager') ? 'management' : role;
+                    const target = `/${prefix}/${prefix}-dashboard.html`;
+                    if (window.appRouter) {
+                        window.appRouter.navigate(target);
+                    } else {
+                        // fallback to direct navigation to the role's dashboard HTML
+                        window.location.href = target;
+                    }
+                }, 300);
             } else {
                 // Show error message
                 this.showError(data.message || 'Invalid username or password');
@@ -97,18 +119,20 @@ class AuthHandler {
     showFieldError(field, message) {
         const input = document.getElementById(field);
         const errorElement = document.getElementById(`${field}Error`);
-        
-        input.classList.add('error');
-        errorElement.textContent = message;
-        errorElement.classList.add('show');
+
+        if (input) input.classList.add('error');
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+        }
     }
 
     clearFieldError(field) {
         const input = document.getElementById(field);
         const errorElement = document.getElementById(`${field}Error`);
-        
-        input.classList.remove('error');
-        errorElement.classList.remove('show');
+
+        if (input) input.classList.remove('error');
+        if (errorElement) errorElement.classList.remove('show');
     }
 
     clearAllErrors() {
@@ -143,31 +167,39 @@ class AuthHandler {
     }
 
     redirectUser(role) {
-        // Define dashboard routes based on role
         const dashboards = {
-            'customer': '/customer-dashboard.html',
-            'driver': '/driver-dashboard.html',
-            'manager': '/manager-dashboard.html',
-            'admin': '/admin-dashboard.html'
+            'customer': 'Templates/Dashboard.html',
+            'driver': 'Templates/Dashboard.html',
+            'manager': 'Templates/Dashboard.html',
+            'admin': 'Templates/Dashboard.html'
         };
 
-        // Normalize role (handle different case formats)
         const normalizedRole = role.toLowerCase();
-        
-        // Get appropriate dashboard or default to customer
-        const dashboardUrl = dashboards[normalizedRole] || dashboards['customer'];
-        
-        // Redirect with slight delay for UX
+        const dashboardRoute = dashboards[normalizedRole] || dashboards['customer'];
+
         setTimeout(() => {
-            window.location.href = dashboardUrl;
+            if (window.appRouter) {
+                window.appRouter.navigate(dashboardRoute);
+            } else {
+                console.error('Router not available, falling back to direct navigation');
+                window.location.href = dashboardRoute;
+            }
         }, 500);
     }
+};
 }
+
+// Global function to initialize auth handler (can be called multiple times)
+window.initAuthHandler = function() {
+    if (document.getElementById('loginForm')) {
+        new AuthHandler();
+    }
+};
 
 // Initialize auth handler when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new AuthHandler());
+    document.addEventListener('DOMContentLoaded', () => window.initAuthHandler());
 } else {
-    new AuthHandler();
-
+    window.initAuthHandler();
 }
+
