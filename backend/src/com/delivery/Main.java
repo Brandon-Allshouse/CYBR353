@@ -1,22 +1,21 @@
 package com.delivery;
 
 import com.delivery.controllers.AdminController;
-import com.delivery.controllers.OrdersController;
-import com.delivery.controllers.PackageController;
 import com.delivery.controllers.AuthenticationController;
 import com.delivery.controllers.CustomerController;
-import com.delivery.controllers.InventoryController;
-import com.delivery.controllers.TransferController;
 import com.delivery.controllers.DriverController;
+import com.delivery.controllers.InventoryController;
 import com.delivery.controllers.ManagementController;
+import com.delivery.controllers.OrdersController;
+import com.delivery.controllers.PackageController;
+import com.delivery.controllers.RouteController;
+import com.delivery.controllers.TransferController; // <-- ADDED
+import com.delivery.security.SecurityManager.AuditLogger;
+import com.delivery.session.SessionManager;
 import com.delivery.util.EnvLoader;
 import com.delivery.util.Result;
 import com.delivery.util.StaticFileHandler;
-import com.delivery.security.SecurityManager.AuditLogger;
-import com.delivery.session.SessionManager;
-
 import com.sun.net.httpserver.HttpServer;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Paths;
@@ -219,6 +218,13 @@ public class Main {
         server.createContext("/api/management/drivers", (exchange) -> {
             ManagementController.handleGetDrivers(exchange);
         });
+
+        // Route optimization endpoints
+        // POST /api/routes/optimize - Optimize and save route
+        server.createContext("/api/routes/optimize", RouteController::handleOptimizeRoute);
+
+        // GET /api/routes/driver/:id - Get optimized routes for a driver
+        server.createContext("/api/routes/driver", RouteController::handleGetDriverRoute);
 
         // Static file handler - serves HTML, CSS, JS files from frontend directory
         // This must be registered LAST as it's a catch-all for unmatched routes
