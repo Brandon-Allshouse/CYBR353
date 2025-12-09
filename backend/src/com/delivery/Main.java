@@ -196,6 +196,8 @@ public class Main {
         server.createContext("/api/package/edit", (exchange) -> {
             PackageController.handleEditPackage(exchange);
         });
+        server.createContext("/api/package/create", PackageController::handleCreatePackage);
+        server.createContext("/api/package/edit-address", PackageController::handleEditAddress);
 
         // Driver endpoints - require CONFIDENTIAL clearance (driver role)
         server.createContext("/api/driver/route", (exchange) -> {
