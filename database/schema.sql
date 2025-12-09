@@ -171,6 +171,7 @@ CREATE TABLE routes (
     estimated_duration_minutes INT UNSIGNED NOT NULL,
     total_stops INT UNSIGNED NOT NULL,
     route_status ENUM('planned', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'planned',
+    route_json TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP NULL,
 
