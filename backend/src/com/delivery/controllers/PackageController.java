@@ -6,7 +6,7 @@ import com.delivery.security.SecurityManager.AuditLogger;
 import com.delivery.security.SecurityManager.InputSanitizer;
 import com.delivery.session.SessionManager;
 import com.delivery.util.Result;
-
+import com.sun.net.httpserver.HttpExchange;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,8 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.sun.net.httpserver.HttpExchange;
 
 // PackageController - handles package tracking and management
 public class PackageController {
@@ -249,151 +247,291 @@ public class PackageController {
     }
 
     // POST /package/create
-    public static void handleCreatePackage(HttpExchange exchange) throws IOException {
-        String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
-    
-        // CORS
-        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-    
-        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
-            exchange.sendResponseHeaders(204, -1);
-            return;
-        }
-    
-        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-            exchange.sendResponseHeaders(405, -1);
-            return;
-        }
-    
-        // Read JSON body
-        String body = readStream(exchange.getRequestBody());
-        Map<String, String> data = parseJson(body);
-    
-        String tracking = data.get("trackingNumber");
-        String weight = data.get("weight");
-        String length = data.get("length");
-        String width = data.get("width");
-        String height = data.get("height");
-    
-        // Validate required fields
-        if (tracking == null || weight == null || length == null || width == null || height == null) {
-            AuditLogger.log(null, null, "CREATE_PACKAGE", "denied", clientIp,
-                "Missing required fields");
-            respondJson(exchange, 400, "{\"error\":\"trackingNumber, weight, length, width, height required\"}");
-            return;
-        }
-    
-        // Sanitize
-        var tRes = InputSanitizer.sanitizeString(tracking);
-        var wRes = InputSanitizer.sanitizeString(weight);
-        var lRes = InputSanitizer.sanitizeString(length);
-        var wiRes = InputSanitizer.sanitizeString(width);
-        var hRes = InputSanitizer.sanitizeString(height);
-    
-        if (tRes.isErr() || wRes.isErr() || lRes.isErr() || wiRes.isErr() || hRes.isErr()) {
-            AuditLogger.log(null, null, "CREATE_PACKAGE", "error", clientIp,
-                "Sanitization failed");
-            respondJson(exchange, 400, "{\"error\":\"Invalid input format\"}");
-            return;
-        }
-    
-        String trackingNumber = tRes.unwrap();
-    
-        double weightKg;
-        double lengthCm;
-        double widthCm;
-        double heightCm;
-    
-        try {
-            weightKg = Double.parseDouble(wRes.unwrap());
-            lengthCm = Double.parseDouble(lRes.unwrap());
-            widthCm = Double.parseDouble(wiRes.unwrap());
-            heightCm = Double.parseDouble(hRes.unwrap());
-        } catch (NumberFormatException e) {
-            respondJson(exchange, 400, "{\"error\":\"Numeric fields must be valid numbers\"}");
-            return;
-        }
-    
-        // DB connection
-        Result<Connection, String> connRes = DatabaseConnection.getConnection();
-        if (connRes.isErr()) {
-            AuditLogger.log(null, null, "CREATE_PACKAGE", "error", clientIp,
-                "DB connection failed");
-            respondJson(exchange, 500, "{\"error\":\"Server error\"}");
-            return;
-        }
-    
-        Connection conn = connRes.unwrap();
-    
-        try {
-            conn.setAutoCommit(false);
-        
-            long packageId;
-        
-            // INSERT package
-            String insertPackage =
-                "INSERT INTO packages (order_id, tracking_number, package_status, weight_kg, length_cm, width_cm, height_cm) " +
-                "VALUES (1, ?, 'created', ?, ?, ?, ?)";
-        
-            try (PreparedStatement stmt = conn.prepareStatement(insertPackage, PreparedStatement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, trackingNumber);
-                stmt.setDouble(2, weightKg);
-                stmt.setDouble(3, lengthCm);
-                stmt.setDouble(4, widthCm);
-                stmt.setDouble(5, heightCm);
-                stmt.executeUpdate();
-            
-                try (ResultSet keys = stmt.getGeneratedKeys()) {
-                    if (!keys.next()) {
-                        conn.rollback();
-                        respondJson(exchange, 500, "{\"error\":\"Failed to create package\"}");
-                        return;
-                    }
-                    packageId = keys.getLong(1);
-                }
-            }
-        
-            // INSERT initial status history
-            String hist =
-                "INSERT INTO delivery_status_history (package_id, status, location, notes) " +
-                "VALUES (?, 'created', 'Unknown Facility', 'Package created')";
-        
-            try (PreparedStatement h = conn.prepareStatement(hist)) {
-                h.setLong(1, packageId);
-                h.executeUpdate();
-            }
-        
-            conn.commit();
-        
-            AuditLogger.log(null, null, "CREATE_PACKAGE", "success", clientIp,
-                "Created package " + trackingNumber);
-        
-            // Build JSON response
-            StringBuilder json = new StringBuilder();
-            json.append("{\"success\":true,");
-            json.append("\"package\":{");
-            json.append("\"packageId\":").append(packageId).append(",");
-            json.append("\"trackingNumber\":\"").append(escapeJson(trackingNumber)).append("\",");
-            json.append("\"status\":\"created\",");
-            json.append("\"weightKg\":").append(weightKg).append(",");
-            json.append("\"dimensions\":{");
-            json.append("\"lengthCm\":").append(lengthCm).append(",");
-            json.append("\"widthCm\":").append(widthCm).append(",");
-            json.append("\"heightCm\":").append(heightCm);
-            json.append("}}}");
-        
-            respondJson(exchange, 201, json.toString());
-        
-        } catch (SQLException e) {
-            try { conn.rollback(); } catch (Exception ignored) {}
-            respondJson(exchange, 500, "{\"error\":\"Database error\"}");
-            e.printStackTrace();
-        } finally {
-            try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
-        }
+public static void handleCreatePackage(HttpExchange exchange) throws IOException {
+    String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
+
+    // CORS
+    exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+    exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
+    exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+        exchange.sendResponseHeaders(204, -1);
+        return;
     }
+
+    if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+        exchange.sendResponseHeaders(405, -1);
+        return;
+    }
+
+    // Get session to identify customer
+    String token = extractToken(exchange);
+    Result<SessionManager.Session, String> sessionResult = SessionManager.getSession(token);
+    if (sessionResult.isErr()) {
+        AuditLogger.log(null, null, "CREATE_PACKAGE", "denied", clientIp,
+            "Session validation failed");
+        respondJson(exchange, 401, "{\"error\":\"Unauthorized - Please log in\"}");
+        return;
+    }
+
+    SessionManager.Session session = sessionResult.unwrap();
+
+    // Read JSON body
+    String body = readStream(exchange.getRequestBody());
+    
+    // Parse nested JSON manually
+    String tracking = extractJsonField(body, "trackingNumber");
+    String weight = extractJsonField(body, "weight");
+    String length = extractJsonField(body, "length");
+    String width = extractJsonField(body, "width");
+    String height = extractJsonField(body, "height");
+    
+    // Extract delivery address fields
+    String deliveryStreet = extractNestedJsonField(body, "deliveryAddress", "streetAddress");
+    String deliveryCity = extractNestedJsonField(body, "deliveryAddress", "city");
+    String deliveryState = extractNestedJsonField(body, "deliveryAddress", "state");
+    String deliveryZip = extractNestedJsonField(body, "deliveryAddress", "zipCode");
+    String deliveryInstructions = extractNestedJsonField(body, "deliveryAddress", "deliveryInstructions");
+
+    // Validate required fields
+    if (tracking == null || weight == null || length == null || width == null || height == null ||
+        deliveryStreet == null || deliveryCity == null || deliveryState == null || deliveryZip == null) {
+        AuditLogger.log(null, session.username, "CREATE_PACKAGE", "denied", clientIp,
+            "Missing required fields");
+        respondJson(exchange, 400, "{\"error\":\"All package details and delivery address fields required\"}");
+        return;
+    }
+
+    // Sanitize inputs
+    var tRes = InputSanitizer.sanitizeString(tracking);
+    var wRes = InputSanitizer.sanitizeString(weight);
+    var lRes = InputSanitizer.sanitizeString(length);
+    var wiRes = InputSanitizer.sanitizeString(width);
+    var hRes = InputSanitizer.sanitizeString(height);
+    var streetRes = InputSanitizer.sanitizeString(deliveryStreet);
+    var cityRes = InputSanitizer.sanitizeString(deliveryCity);
+    var stateRes = InputSanitizer.sanitizeString(deliveryState);
+    var zipRes = InputSanitizer.sanitizeString(deliveryZip);
+    var instrRes = deliveryInstructions != null ? InputSanitizer.sanitizeString(deliveryInstructions) : 
+                   SecurityManager.Result.ok("");
+
+    if (tRes.isErr() || wRes.isErr() || lRes.isErr() || wiRes.isErr() || hRes.isErr() ||
+        streetRes.isErr() || cityRes.isErr() || stateRes.isErr() || zipRes.isErr() || instrRes.isErr()) {
+        AuditLogger.log(null, session.username, "CREATE_PACKAGE", "error", clientIp,
+            "Sanitization failed");
+        respondJson(exchange, 400, "{\"error\":\"Invalid input format\"}");
+        return;
+    }
+
+    String trackingNumber = tRes.unwrap();
+    String sanitizedStreet = streetRes.unwrap();
+    String sanitizedCity = cityRes.unwrap();
+    String sanitizedState = stateRes.unwrap();
+    String sanitizedZip = zipRes.unwrap();
+    String sanitizedInstr = instrRes.unwrap();
+
+    double weightKg, lengthCm, widthCm, heightCm;
+
+    try {
+        weightKg = Double.parseDouble(wRes.unwrap());
+        lengthCm = Double.parseDouble(lRes.unwrap());
+        widthCm = Double.parseDouble(wiRes.unwrap());
+        heightCm = Double.parseDouble(hRes.unwrap());
+    } catch (NumberFormatException e) {
+        respondJson(exchange, 400, "{\"error\":\"Numeric fields must be valid numbers\"}");
+        return;
+    }
+
+    // DB connection
+    Result<Connection, String> connRes = DatabaseConnection.getConnection();
+    if (connRes.isErr()) {
+        AuditLogger.log(null, session.username, "CREATE_PACKAGE", "error", clientIp,
+            "DB connection failed");
+        respondJson(exchange, 500, "{\"error\":\"Server error\"}");
+        return;
+    }
+
+    Connection conn = connRes.unwrap();
+
+    try {
+        conn.setAutoCommit(false);
+
+        // Get customer ID from session
+        long customerId = getUserId(conn, session.username);
+        if (customerId == -1) {
+            conn.rollback();
+            respondJson(exchange, 404, "{\"error\":\"User not found\"}");
+            return;
+        }
+
+        // 1. Create delivery address
+// 1. Create delivery address
+String insertAddress =
+    "INSERT INTO addresses (user_id, address_type, street_address, city, state, zip_code, delivery_instructions) " +
+    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+long deliveryAddressId;
+try (PreparedStatement addrStmt = conn.prepareStatement(insertAddress, PreparedStatement.RETURN_GENERATED_KEYS)) {
+    addrStmt.setLong(1, customerId);                // user_id
+    addrStmt.setString(2, "delivery");              // address_type
+    addrStmt.setString(3, sanitizedStreet);         // street_address
+    addrStmt.setString(4, sanitizedCity);           // city
+    addrStmt.setString(5, sanitizedState);          // state
+    addrStmt.setString(6, sanitizedZip);            // zip_code
+    addrStmt.setString(7, sanitizedInstr.isEmpty() ? null : sanitizedInstr); // delivery_instructions
+    addrStmt.executeUpdate();
+
+    try (ResultSet keys = addrStmt.getGeneratedKeys()) {
+        if (!keys.next()) {
+            conn.rollback();
+            respondJson(exchange, 500, "{\"error\":\"Failed to create address\"}");
+            return;
+        }
+        deliveryAddressId = keys.getLong(1);
+    }
+}
+
+// 2. Create order - use East Coast Hub (facility_id = 3) as default pickup
+// First, get or create the pickup address for East Coast Hub
+// 2. Create order - use East Coast Hub as default pickup
+long defaultPickupAddressId = 1; // Update this with your actual address_id
+
+String insertOrder =
+    "INSERT INTO orders (customer_id, pickup_address_id, delivery_address_id, order_status, total_cost) " +
+    "VALUES (?, ?, ?, 'pending', 0.00)";
+
+long orderId;
+try (PreparedStatement orderStmt = conn.prepareStatement(insertOrder, PreparedStatement.RETURN_GENERATED_KEYS)) {
+    orderStmt.setLong(1, customerId);
+    orderStmt.setLong(2, defaultPickupAddressId);  // East Coast Hub pickup address
+    orderStmt.setLong(3, deliveryAddressId);
+    orderStmt.executeUpdate();
+
+    try (ResultSet keys = orderStmt.getGeneratedKeys()) {
+        if (!keys.next()) {
+            conn.rollback();
+            respondJson(exchange, 500, "{\"error\":\"Failed to create order\"}");
+            return;
+        }
+        orderId = keys.getLong(1);
+    }
+}
+
+        // 3. Create package
+// 3. Create package
+String insertPackage =
+    "INSERT INTO packages (order_id, tracking_number, weight_kg, length_cm, width_cm, height_cm, package_status) " +
+    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+long packageId;
+try (PreparedStatement pkgStmt = conn.prepareStatement(insertPackage, PreparedStatement.RETURN_GENERATED_KEYS)) {
+    pkgStmt.setLong(1, orderId);                    // order_id
+    pkgStmt.setString(2, trackingNumber);           // tracking_number
+    pkgStmt.setDouble(3, weightKg);                 // weight_kg
+    pkgStmt.setDouble(4, lengthCm);                 // length_cm
+    pkgStmt.setDouble(5, widthCm);                  // width_cm
+    pkgStmt.setDouble(6, heightCm);                 // height_cm
+    pkgStmt.setString(7, "pending");                // package_status
+    pkgStmt.executeUpdate();
+
+    try (ResultSet keys = pkgStmt.getGeneratedKeys()) {
+        if (!keys.next()) {
+            conn.rollback();
+            respondJson(exchange, 500, "{\"error\":\"Failed to create package\"}");
+            return;
+        }
+        packageId = keys.getLong(1);
+    }
+}
+
+        // 4. Create initial status history
+        String insertHistory =
+            "INSERT INTO delivery_status_history (package_id, status, location, notes) " +
+            "VALUES (?, 'created', 'Awaiting Pickup', 'Package created by customer')";
+        
+        try (PreparedStatement histStmt = conn.prepareStatement(insertHistory)) {
+            histStmt.setLong(1, packageId);
+            histStmt.executeUpdate();
+        }
+
+        conn.commit();
+
+        AuditLogger.log(customerId, session.username, "CREATE_PACKAGE", "success", clientIp,
+            "Created package " + trackingNumber + " with delivery to " + sanitizedCity + ", " + sanitizedState);
+
+        // Build JSON response
+        StringBuilder json = new StringBuilder();
+        json.append("{\"success\":true,");
+        json.append("\"package\":{");
+        json.append("\"packageId\":").append(packageId).append(",");
+        json.append("\"trackingNumber\":\"").append(escapeJson(trackingNumber)).append("\",");
+        json.append("\"status\":\"created\",");
+        json.append("\"weightKg\":").append(weightKg).append(",");
+        json.append("\"dimensions\":{");
+        json.append("\"lengthCm\":").append(lengthCm).append(",");
+        json.append("\"widthCm\":").append(widthCm).append(",");
+        json.append("\"heightCm\":").append(heightCm);
+        json.append("},");
+        json.append("\"deliveryAddress\":{");
+        json.append("\"streetAddress\":\"").append(escapeJson(sanitizedStreet)).append("\",");
+        json.append("\"city\":\"").append(escapeJson(sanitizedCity)).append("\",");
+        json.append("\"state\":\"").append(escapeJson(sanitizedState)).append("\",");
+        json.append("\"zipCode\":\"").append(escapeJson(sanitizedZip)).append("\"");
+        json.append("}}}");
+
+        respondJson(exchange, 201, json.toString());
+
+    } catch (SQLException e) {
+        try { conn.rollback(); } catch (Exception ignored) {}
+        respondJson(exchange, 500, "{\"error\":\"Database error\"}");
+        e.printStackTrace();
+    } finally {
+        try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+    }
+}
+
+// Helper method to extract simple JSON fields
+private static String extractJsonField(String json, String fieldName) {
+    String searchStr = "\"" + fieldName + "\":";
+    int startIdx = json.indexOf(searchStr);
+    if (startIdx == -1) return null;
+    
+    startIdx += searchStr.length();
+    
+    // Skip whitespace
+    while (startIdx < json.length() && Character.isWhitespace(json.charAt(startIdx))) {
+        startIdx++;
+    }
+    
+    // Check if it's a string (starts with quote) or number
+    if (startIdx < json.length() && json.charAt(startIdx) == '"') {
+        startIdx++; // Skip opening quote
+        int endIdx = json.indexOf('"', startIdx);
+        if (endIdx == -1) return null;
+        return json.substring(startIdx, endIdx);
+    } else {
+        // It's a number
+        int endIdx = startIdx;
+        while (endIdx < json.length() && (Character.isDigit(json.charAt(endIdx)) || json.charAt(endIdx) == '.')) {
+            endIdx++;
+        }
+        return json.substring(startIdx, endIdx);
+    }
+}
+
+// Helper method to extract nested JSON fields (e.g., deliveryAddress.city)
+private static String extractNestedJsonField(String json, String objectName, String fieldName) {
+    String objectStart = "\"" + objectName + "\":{";
+    int objStartIdx = json.indexOf(objectStart);
+    if (objStartIdx == -1) return null;
+    
+    int objEndIdx = json.indexOf("}", objStartIdx);
+    if (objEndIdx == -1) return null;
+    
+    String objectContent = json.substring(objStartIdx, objEndIdx + 1);
+    return extractJsonField(objectContent, fieldName);
+}
     
     
     // POST /package/edit
@@ -891,7 +1029,232 @@ public class PackageController {
             try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
         }
     }
+    // POST /package/edit-address
+public static void handleEditAddress(HttpExchange exchange) throws IOException {
+    String clientIp = exchange.getRemoteAddress().getAddress().getHostAddress();
 
+    // CORS headers
+    exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+    exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
+    exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+        exchange.sendResponseHeaders(204, -1);
+        return;
+    }
+
+    if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+        exchange.sendResponseHeaders(405, -1);
+        return;
+    }
+
+    // Validate session
+    String token = extractToken(exchange);
+    Result<SessionManager.Session, String> sessionResult = SessionManager.getSession(token);
+    if (sessionResult.isErr()) {
+        AuditLogger.log(null, null, "EDIT_ADDRESS", "denied", clientIp,
+            "Session validation failed");
+        respondJson(exchange, 401, "{\"error\":\"Unauthorized - Please log in\"}");
+        return;
+    }
+    SessionManager.Session session = sessionResult.unwrap();
+
+    // Parse request body
+    String body = readStream(exchange.getRequestBody());
+    Map<String, String> parsed = parseJson(body);
+
+    String tracking = parsed.get("tracking_number");
+    String streetAddress = parsed.get("street_address");
+    String city = parsed.get("city");
+    String state = parsed.get("state");
+    String zipCode = parsed.get("zip_code");
+
+    if (tracking == null || tracking.trim().isEmpty()) {
+        respondJson(exchange, 400, "{\"error\":\"tracking_number is required\"}");
+        return;
+    }
+
+    // At least one address field must be provided
+    boolean hasAddressUpdate = (streetAddress != null && !streetAddress.trim().isEmpty())
+                            || (city != null && !city.trim().isEmpty())
+                            || (state != null && !state.trim().isEmpty())
+                            || (zipCode != null && !zipCode.trim().isEmpty());
+
+    if (!hasAddressUpdate) {
+        respondJson(exchange, 400, "{\"error\":\"At least one address field must be provided\"}");
+        return;
+    }
+
+    // Sanitize inputs
+    SecurityManager.Result<String, String> tRes = InputSanitizer.sanitizeString(tracking);
+    SecurityManager.Result<String, String> streetRes = streetAddress != null ? 
+        InputSanitizer.sanitizeString(streetAddress) : SecurityManager.Result.ok(null);
+    SecurityManager.Result<String, String> cityRes = city != null ? 
+        InputSanitizer.sanitizeString(city) : SecurityManager.Result.ok(null);
+    SecurityManager.Result<String, String> stateRes = state != null ? 
+        InputSanitizer.sanitizeString(state) : SecurityManager.Result.ok(null);
+    SecurityManager.Result<String, String> zipRes = zipCode != null ? 
+        InputSanitizer.sanitizeString(zipCode) : SecurityManager.Result.ok(null);
+
+    if (tRes.isErr() || streetRes.isErr() || cityRes.isErr() || stateRes.isErr() || zipRes.isErr()) {
+        respondJson(exchange, 400, "{\"error\":\"Invalid input format\"}");
+        return;
+    }
+
+    String sanitizedTracking = tRes.unwrap();
+    String sanitizedStreet = streetRes.unwrap();
+    String sanitizedCity = cityRes.unwrap();
+    String sanitizedState = stateRes.unwrap();
+    String sanitizedZip = zipRes.unwrap();
+
+    // DB connection
+    Result<Connection, String> connRes = DatabaseConnection.getConnection();
+    if (connRes.isErr()) {
+        respondJson(exchange, 500, "{\"error\":\"Server error\"}");
+        return;
+    }
+    Connection conn = connRes.unwrap();
+
+    try {
+        conn.setAutoCommit(false);
+
+        // Find package and get order's delivery address
+        long packageId = -1;
+        long orderId = -1;
+        long addressId = -1;
+        long ownerId = -1;
+        
+        String findQuery = 
+            "SELECT p.package_id, p.order_id, o.delivery_address_id, o.customer_id " +
+            "FROM packages p " +
+            "JOIN orders o ON p.order_id = o.order_id " +
+            "WHERE p.tracking_number = ?";
+
+        try (PreparedStatement findStmt = conn.prepareStatement(findQuery)) {
+            findStmt.setString(1, sanitizedTracking);
+            try (ResultSet rs = findStmt.executeQuery()) {
+                if (!rs.next()) {
+                    conn.rollback();
+                    respondJson(exchange, 404, "{\"error\":\"Package not found\"}");
+                    return;
+                }
+                packageId = rs.getLong("package_id");
+                orderId = rs.getLong("order_id");
+                addressId = rs.getLong("delivery_address_id");
+                ownerId = rs.getLong("customer_id");
+            }
+        }
+
+        // Authorization: customer must own the package
+        long userId = getUserId(conn, session.username);
+        boolean isPrivileged = "manager".equals(session.role) || "admin".equals(session.role);
+        
+        if (!isPrivileged && userId != ownerId) {
+            conn.rollback();
+            respondJson(exchange, 403, "{\"error\":\"Forbidden - not owner of package\"}");
+            return;
+        }
+
+        // Build dynamic update for address
+        List<String> setParts = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+
+        if (sanitizedStreet != null && !sanitizedStreet.isEmpty()) {
+            setParts.add("street_address = ?");
+            params.add(sanitizedStreet);
+        }
+        if (sanitizedCity != null && !sanitizedCity.isEmpty()) {
+            setParts.add("city = ?");
+            params.add(sanitizedCity);
+        }
+        if (sanitizedState != null && !sanitizedState.isEmpty()) {
+            setParts.add("state = ?");
+            params.add(sanitizedState);
+        }
+        if (sanitizedZip != null && !sanitizedZip.isEmpty()) {
+            setParts.add("zip_code = ?");
+            params.add(sanitizedZip);
+        }
+
+        if (setParts.isEmpty()) {
+            conn.rollback();
+            respondJson(exchange, 400, "{\"error\":\"No valid address fields to update\"}");
+            return;
+        }
+
+        // Update the address
+        String updateSql = "UPDATE addresses SET " + String.join(", ", setParts) + " WHERE address_id = ?";
+        try (PreparedStatement upd = conn.prepareStatement(updateSql)) {
+            int idx = 1;
+            for (Object p : params) {
+                upd.setObject(idx++, p);
+            }
+            upd.setLong(idx, addressId);
+            upd.executeUpdate();
+        }
+
+        // Log the change in package_edit_history
+        String historySql = 
+            "INSERT INTO package_edit_history (package_id, edited_by, field_name, old_value, new_value, edit_reason) " +
+            "VALUES (?, ?, ?, ?, ?, ?)";
+        
+        try (PreparedStatement hist = conn.prepareStatement(historySql)) {
+            hist.setLong(1, packageId);
+            hist.setLong(2, userId);
+            hist.setString(3, "delivery_address");
+            hist.setString(4, "Address updated");
+            hist.setString(5, String.format("Street: %s, City: %s, State: %s, Zip: %s", 
+                sanitizedStreet != null ? sanitizedStreet : "N/A",
+                sanitizedCity != null ? sanitizedCity : "N/A",
+                sanitizedState != null ? sanitizedState : "N/A",
+                sanitizedZip != null ? sanitizedZip : "N/A"));
+            hist.setString(6, "Customer updated delivery address");
+            hist.executeUpdate();
+        }
+
+        // Fetch updated address
+        String fetchSql = "SELECT street_address, city, state, zip_code FROM addresses WHERE address_id = ?";
+        String outStreet = "", outCity = "", outState = "", outZip = "";
+        
+        try (PreparedStatement fetch = conn.prepareStatement(fetchSql)) {
+            fetch.setLong(1, addressId);
+            try (ResultSet rs = fetch.executeQuery()) {
+                if (rs.next()) {
+                    outStreet = rs.getString("street_address");
+                    outCity = rs.getString("city");
+                    outState = rs.getString("state");
+                    outZip = rs.getString("zip_code");
+                }
+            }
+        }
+
+        conn.commit();
+
+        AuditLogger.log(userId, session.username, "EDIT_ADDRESS", "success", clientIp,
+            String.format("Updated delivery address for package %s", sanitizedTracking));
+
+        // Build response
+        StringBuilder resp = new StringBuilder();
+        resp.append("{");
+        resp.append("\"success\":true,");
+        resp.append("\"tracking_number\":\"").append(escapeJson(sanitizedTracking)).append("\",");
+        resp.append("\"delivery_address\":{");
+        resp.append("\"street_address\":\"").append(escapeJson(outStreet)).append("\",");
+        resp.append("\"city\":\"").append(escapeJson(outCity)).append("\",");
+        resp.append("\"state\":\"").append(escapeJson(outState)).append("\",");
+        resp.append("\"zip_code\":\"").append(escapeJson(outZip)).append("\"");
+        resp.append("}}");
+
+        respondJson(exchange, 200, resp.toString());
+
+    } catch (SQLException e) {
+        try { conn.rollback(); } catch (Exception ignored) {}
+        e.printStackTrace();
+        respondJson(exchange, 500, "{\"error\":\"Server error. Please try again later.\"}");
+    } finally {
+        try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
+    }
+}
     // Helper methods
 
     private static String extractToken(HttpExchange exchange) {

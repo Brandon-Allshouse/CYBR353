@@ -4,7 +4,6 @@ import com.delivery.database.DatabaseConnection;
 import com.delivery.models.Facility;
 import com.delivery.models.InventoryItem;
 import com.delivery.util.Result;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

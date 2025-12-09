@@ -24,73 +24,98 @@
 
   <div class="container">
     <h2>Edit Packages</h2>
-    <h3>Edit Package Details</h3>
-    <p>Select a package below to edit its details.</p>
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Tracking #</th>
-            <th>Weight (kg)</th>
-            <th>Length (cm)</th>
-            <th>Width (cm)</th>
-            <th>Height (cm)</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="editablePackagesTable">
-          <tr><td colspan="6" class="no-data">No Packages were Edited.</td></tr>
-        </tbody>
-      </table>
+    
+    <div class="section">
+      <h3>Package Identification</h3>
+      <div class="form-group">
+        <label for="getPackageByTrackingNumber">Tracking Number</label>
+        <input type="text" id="getPackageByTrackingNumber" placeholder="Enter tracking number" />
+      </div>
     </div>
 
     <div class="section">
-      <h4>Tracking Number of Package to Edit</h4>
-      <div class="form-group">
-          <label for="getPackageByTrackingNumber">Tracking Number</label>
-          <input type="text" id="getPackageByTrackingNumber" />
-        </div>
-      <h4>Edit Package</h4>
+      <h3>Edit Package Dimensions</h3>
       <form id="editPackageForm" class="form">
         <div class="form-group">
-          <label for="editWeight">Weight</label>
-          <input type="text" id="editWeight" />
+          <label for="editWeight">Weight (kg)</label>
+          <input type="number" step="0.01" id="editWeight" placeholder="Leave blank to keep current" />
         </div>
         <div class="form-group">
-          <label for="editLength">Length</label>
-          <input type="text" id="editLength" />
+          <label for="editLength">Length (cm)</label>
+          <input type="number" step="0.01" id="editLength" placeholder="Leave blank to keep current" />
         </div>
         <div class="form-group">
-          <label for="editWidth">Width</label>
-          <input type="text" id="editWidth" />
+          <label for="editWidth">Width (cm)</label>
+          <input type="number" step="0.01" id="editWidth" placeholder="Leave blank to keep current" />
         </div>
         <div class="form-group">
-          <label for="editHeight">Height</label>
-          <input type="text" id="editHeight" />
+          <label for="editHeight">Height (cm)</label>
+          <input type="number" step="0.01" id="editHeight" placeholder="Leave blank to keep current" />
         </div>
         <div class="form-group">
-          <label for="editNotes">Notes</label>
-          <textarea id="editNotes" rows="3"></textarea>
+          <label for="editNotes">Notes (optional)</label>
+          <textarea id="editNotes" rows="2" placeholder="Reason for changes"></textarea>
         </div>
-        <button type="button" class="btn" onclick="editPackage()">Save Changes</button>
+        <button type="button" class="btn" onclick="editPackageDimensions()">Update Dimensions</button>
       </form>
+    </div>
+
+    <div class="section">
+      <h3>Edit Delivery Address</h3>
+      <form id="editAddressForm" class="form">
+        <div class="form-group">
+          <label for="editStreetAddress">Street Address</label>
+          <input type="text" id="editStreetAddress" placeholder="Leave blank to keep current" />
+        </div>
+        <div class="form-group">
+          <label for="editCity">City</label>
+          <input type="text" id="editCity" placeholder="Leave blank to keep current" />
+        </div>
+        <div class="form-group">
+          <label for="editState">State</label>
+          <input type="text" id="editState" placeholder="Leave blank to keep current" maxlength="2" />
+        </div>
+        <div class="form-group">
+          <label for="editZipCode">ZIP Code</label>
+          <input type="text" id="editZipCode" placeholder="Leave blank to keep current" />
+        </div>
+        <button type="button" class="btn" onclick="editPackageAddress()">Update Address</button>
+      </form>
+    </div>
+
+    <div class="section">
+      <h3>Recently Updated Packages</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Tracking #</th>
+              <th>Weight (kg)</th>
+              <th>Dimensions (L×W×H cm)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="editablePackagesTable">
+            <tr><td colspan="4" class="no-data">No packages edited yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <p><a href="#" data-route="/customer/dashboard">Back to Customer Dashboard</a></p>
   </div>
 
   <script src="../js/router.js"></script>
-  <script src="../js/orders.js"></script>
   <script>
-  async function editPackage() {
+  // Edit package dimensions
+  async function editPackageDimensions() {
     const trackingNumber = document.getElementById("getPackageByTrackingNumber").value.trim();
 
     if (!trackingNumber) {
-      alert("Tracking number is required.");
+      alert("Please enter a tracking number first.");
       return;
     }
 
-    // Build JSON payload ONLY with fields the user entered
     const payload = { tracking_number: trackingNumber };
 
     const weight = document.getElementById("editWeight").value.trim();
@@ -105,9 +130,8 @@
     if (height !== "") payload.height  = parseFloat(height);
     if (notes  !== "") payload.notes   = notes;
 
-    // If user didn't enter any edits, warn them
     if (Object.keys(payload).length === 1) {
-      alert("No fields entered to update.");
+      alert("No dimension fields entered to update.");
       return;
     }
 
@@ -119,13 +143,16 @@
       });
 
       const data = await response.json();
-      console.log("Updated Package:", data);
 
       if (response.ok) {
-        alert("Package updated successfully!");
-
+        alert("Package dimensions updated successfully!");
         updateEditablePackagesTable(data);
-
+        // Clear form
+        document.getElementById("editWeight").value = "";
+        document.getElementById("editLength").value = "";
+        document.getElementById("editWidth").value = "";
+        document.getElementById("editHeight").value = "";
+        document.getElementById("editNotes").value = "";
       } else {
         alert("Update failed: " + (data.error || "Unknown error"));
       }
@@ -135,30 +162,76 @@
     }
   }
 
+  // Edit package address
+  async function editPackageAddress() {
+    const trackingNumber = document.getElementById("getPackageByTrackingNumber").value.trim();
+
+    if (!trackingNumber) {
+      alert("Please enter a tracking number first.");
+      return;
+    }
+
+    const payload = { tracking_number: trackingNumber };
+
+    const street = document.getElementById("editStreetAddress").value.trim();
+    const city   = document.getElementById("editCity").value.trim();
+    const state  = document.getElementById("editState").value.trim();
+    const zip    = document.getElementById("editZipCode").value.trim();
+
+    if (street !== "") payload.street_address = street;
+    if (city   !== "") payload.city = city;
+    if (state  !== "") payload.state = state;
+    if (zip    !== "") payload.zip_code = zip;
+
+    if (Object.keys(payload).length === 1) {
+      alert("No address fields entered to update.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:8081/api/package/edit-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Delivery address updated successfully!");
+        console.log("Updated address:", data.delivery_address);
+        // Clear form
+        document.getElementById("editStreetAddress").value = "";
+        document.getElementById("editCity").value = "";
+        document.getElementById("editState").value = "";
+        document.getElementById("editZipCode").value = "";
+      } else {
+        alert("Update failed: " + (data.error || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error updating address:", error);
+      alert("Server unreachable or failed to update.");
+    }
+  }
+
   function updateEditablePackagesTable(pkg) {
     const table = document.getElementById("editablePackagesTable");
 
-    // Clear table (remove “No Packages” row)
-    if (table.innerHTML.includes("No Packages were Edited.")) {
+    if (table.innerHTML.includes("No packages edited yet.")) {
       table.innerHTML = "";
     }
 
-    // Insert new row
     const row = document.createElement("tr");
-
     row.innerHTML = `
       <td>${pkg.tracking_number}</td>
       <td>${pkg.weight}</td>
-      <td>${pkg.length}</td>
-      <td>${pkg.width}</td>
-      <td>${pkg.height}</td>
+      <td>${pkg.length} × ${pkg.width} × ${pkg.height}</td>
       <td>${pkg.status}</td>
     `;
 
     table.appendChild(row);
   }
-</script>
-
+  </script>
 
   <script>
     // Access control: only allow customer
